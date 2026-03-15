@@ -7,7 +7,7 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [prepResult, setPrepResult] = useState(null);
+  const [prepResult, setPrepResult] = useState(null); // Backendden gelen veriler burada tutulacak
 
   const handlePreprocess = async () => {
     if (!file || !targetColumn) {
@@ -51,8 +51,8 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
           <span className="step-tag">STEP 3 OF 7</span>
           <h2>Data Preparation — Cleaning & Organising Your Data</h2>
           <p>
-            Before a model can learn, the data must be clean, consistent, and
-            split into two groups: training and testing.
+            Before a model can learn, the data must be split into training and
+            testing, missing values filled, and scaled correctly.
           </p>
         </div>
         <div className="hdr-right">
@@ -67,15 +67,20 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
       </div>
 
       <div className="cols">
-        {/* SOL TARAF: AYARLAR */}
+        {/* SOL KOLON: AYARLAR */}
         <div>
           <div className="card">
             <div className="card-title">Preparation Settings</div>
 
-            <label className="lbl">
-              Train / Test Split ({trainSplit}% Train)
-            </label>
-            <div className="slider-row">
+            <label className="lbl">Train / Test Split</label>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "12px",
+                marginTop: "4px",
+              }}
+            >
               <input
                 type="range"
                 min="60"
@@ -83,15 +88,35 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                 step="5"
                 value={trainSplit}
                 onChange={(e) => setTrainSplit(e.target.value)}
+                style={{ flex: 1 }}
               />
-              <div className="slider-val">{trainSplit}%</div>
+              <div
+                style={{
+                  padding: "4px 8px",
+                  background: "var(--sky)",
+                  color: "var(--navy)",
+                  fontWeight: 600,
+                  borderRadius: "8px",
+                  border: "1px solid var(--line2)",
+                }}
+              >
+                {trainSplit}%
+              </div>
             </div>
-            <div className="slider-hint">
+            <div
+              style={{
+                fontSize: "11px",
+                color: "var(--muted)",
+                marginTop: "5px",
+              }}
+            >
               The model learns from the training group and is tested on the
               rest.
             </div>
 
-            <label className="lbl">Handling Missing Values</label>
+            <label className="lbl" style={{ marginTop: "15px" }}>
+              Handling Missing Values
+            </label>
             <select
               className="sel"
               value={missingStrategy}
@@ -105,7 +130,9 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
               </option>
             </select>
 
-            <label className="lbl">Normalisation</label>
+            <label className="lbl" style={{ marginTop: "15px" }}>
+              Normalisation
+            </label>
             <select
               className="sel"
               value={normalization}
@@ -129,18 +156,18 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
               onClick={handlePreprocess}
               disabled={loading}
             >
-              {loading ? "İşleniyor..." : "✓ Apply Preparation Settings"}
+              {loading
+                ? "⏳ Veriler İşleniyor..."
+                : "✓ Apply Preparation Settings"}
             </button>
           </div>
         </div>
 
-        {/* SAĞ TARAF: SONUÇLAR */}
+        {/* SAĞ KOLON: GERÇEK SONUÇLAR */}
         <div>
-          {prepResult ? (
-            <div className="card">
-              <div className="card-title">
-                Results: Normalisation (Before & After)
-              </div>
+          <div className="card">
+            <div className="card-title">Before & After Normalisation</div>
+            {prepResult ? (
               <div className="grid2">
                 <div>
                   <div
@@ -148,20 +175,149 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                       fontSize: "11px",
                       fontWeight: 600,
                       color: "var(--muted)",
+                      textAlign: "center",
                       marginBottom: "8px",
                     }}
                   >
-                    BEFORE (Raw Values)
+                    BEFORE (raw values)
                   </div>
-                  <p style={{ fontSize: "13px" }}>
-                    <b>Min:</b> {prepResult.before.min}
-                  </p>
-                  <p style={{ fontSize: "13px" }}>
-                    <b>Mean:</b> {prepResult.before.mean}
-                  </p>
-                  <p style={{ fontSize: "13px" }}>
-                    <b>Max:</b> {prepResult.before.max}
-                  </p>
+                  <div
+                    className="bars"
+                    style={{ display: "grid", gap: "10px" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "60px",
+                          fontSize: "12px",
+                          color: "var(--mid)",
+                          textAlign: "right",
+                        }}
+                      >
+                        Min
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: "10px",
+                          borderRadius: "999px",
+                          background: "var(--line)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "14%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: "var(--bad)",
+                          }}
+                        ></div>
+                      </div>
+                      <div
+                        style={{
+                          width: "30px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {prepResult.before.min}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "60px",
+                          fontSize: "12px",
+                          color: "var(--mid)",
+                          textAlign: "right",
+                        }}
+                      >
+                        Mean
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: "10px",
+                          borderRadius: "999px",
+                          background: "var(--line)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "38%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: "var(--navy)",
+                          }}
+                        ></div>
+                      </div>
+                      <div
+                        style={{
+                          width: "30px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {prepResult.before.mean}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "60px",
+                          fontSize: "12px",
+                          color: "var(--mid)",
+                          textAlign: "right",
+                        }}
+                      >
+                        Max
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: "10px",
+                          borderRadius: "999px",
+                          background: "var(--line)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "80%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: "var(--teal)",
+                          }}
+                        ></div>
+                      </div>
+                      <div
+                        style={{
+                          width: "30px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {prepResult.before.max}
+                      </div>
+                    </div>
+                  </div>
                 </div>
                 <div>
                   <div
@@ -169,44 +325,174 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                       fontSize: "11px",
                       fontWeight: 600,
                       color: "var(--muted)",
+                      textAlign: "center",
                       marginBottom: "8px",
                     }}
                   >
                     AFTER ({normalization})
                   </div>
-                  <p style={{ fontSize: "13px" }}>
-                    <b>Min:</b> {prepResult.after.min}
-                  </p>
-                  <p style={{ fontSize: "13px" }}>
-                    <b>Mean:</b> {prepResult.after.mean}
-                  </p>
-                  <p style={{ fontSize: "13px" }}>
-                    <b>Max:</b> {prepResult.after.max}
-                  </p>
+                  <div
+                    className="bars"
+                    style={{ display: "grid", gap: "10px" }}
+                  >
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "60px",
+                          fontSize: "12px",
+                          color: "var(--mid)",
+                          textAlign: "right",
+                        }}
+                      >
+                        Min
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: "10px",
+                          borderRadius: "999px",
+                          background: "var(--line)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "10%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: "var(--bad)",
+                          }}
+                        ></div>
+                      </div>
+                      <div
+                        style={{
+                          width: "40px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {prepResult.after.min}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "60px",
+                          fontSize: "12px",
+                          color: "var(--mid)",
+                          textAlign: "right",
+                        }}
+                      >
+                        Mean
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: "10px",
+                          borderRadius: "999px",
+                          background: "var(--line)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "50%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: "var(--navy)",
+                          }}
+                        ></div>
+                      </div>
+                      <div
+                        style={{
+                          width: "40px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {prepResult.after.mean}
+                      </div>
+                    </div>
+                    <div
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "10px",
+                      }}
+                    >
+                      <div
+                        style={{
+                          width: "60px",
+                          fontSize: "12px",
+                          color: "var(--mid)",
+                          textAlign: "right",
+                        }}
+                      >
+                        Max
+                      </div>
+                      <div
+                        style={{
+                          flex: 1,
+                          height: "10px",
+                          borderRadius: "999px",
+                          background: "var(--line)",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "90%",
+                            height: "100%",
+                            borderRadius: "999px",
+                            background: "var(--teal)",
+                          }}
+                        ></div>
+                      </div>
+                      <div
+                        style={{
+                          width: "40px",
+                          fontSize: "12px",
+                          fontWeight: 600,
+                        }}
+                      >
+                        {prepResult.after.max}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
-              <div className="banner good" style={{ marginTop: "15px" }}>
+            ) : (
+              <div
+                style={{
+                  padding: "30px",
+                  textAlign: "center",
+                  color: "var(--muted)",
+                }}
+              >
+                Lütfen soldaki ayarları uygulayarak verilerinizi analiz edin.
+              </div>
+            )}
+
+            {prepResult && (
+              <div className="banner good" style={{ marginTop: "20px" }}>
                 <div className="banner-icon">✅</div>
                 <div>
                   <b>Ready:</b> Data is clean and split into{" "}
-                  {prepResult.train_patients} Train / {prepResult.test_patients}{" "}
-                  Test patients. Proceed to Step 4.
+                  {prepResult.train_patients} Train and{" "}
+                  {prepResult.test_patients} Test patients. Proceed to Step 4.
                 </div>
               </div>
-            </div>
-          ) : (
-            <div
-              className="card"
-              style={{
-                textAlign: "center",
-                padding: "40px",
-                color: "var(--muted)",
-              }}
-            >
-              Sol taraftan ayarları seçip <b>Apply Preparation Settings</b>{" "}
-              butonuna basın.
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 

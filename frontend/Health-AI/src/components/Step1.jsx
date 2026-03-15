@@ -11,11 +11,18 @@ export default function Step1({ selectedDomain, onNext }) {
           <h2>Clinical Context & Problem Definition</h2>
           <p>
             Before we look at any data, we define the clinical problem. In{" "}
-            <b>{selectedDomain}</b>, we want to predict the outcome so
-            clinicians can act early.
+            <b>{selectedDomain}</b>, we want to predict which patients are most
+            likely to be readmitted to hospital within 30 days after a heart
+            failure discharge — so doctors can arrange follow-up care in
+            advance.
           </p>
         </div>
         <div className="hdr-right">
+          <div
+            style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600 }}
+          >
+            ⏱ ~3 minutes
+          </div>
           <button className="btn primary" onClick={onNext}>
             Next Step →
           </button>
@@ -23,6 +30,7 @@ export default function Step1({ selectedDomain, onNext }) {
       </div>
 
       <div className="cols">
+        {/* SOL KOLON */}
         <div>
           <div className="card">
             <div className="card-title">Clinical Scenario</div>
@@ -38,6 +46,32 @@ export default function Step1({ selectedDomain, onNext }) {
               {selectedDomain}
             </div>
 
+            <label className="lbl">Clinical Question</label>
+            <div
+              style={{
+                fontSize: "13px",
+                color: "var(--mid)",
+                lineHeight: 1.6,
+                padding: "10px 12px",
+                background: "var(--sky)",
+                borderRadius: "10px",
+                border: "1px solid var(--line2)",
+              }}
+            >
+              Will this patient be readmitted to hospital within 30 days of
+              discharge following a heart failure episode?
+            </div>
+
+            <label className="lbl">Why This Matters</label>
+            <div
+              style={{ fontSize: "13px", color: "var(--mid)", lineHeight: 1.6 }}
+            >
+              30% of heart failure patients are readmitted within 30 days. Each
+              readmission costs approximately €15,000. Early identification
+              allows nurses to arrange discharge follow-up calls and medication
+              checks.
+            </div>
+
             <div className="banner warn" style={{ marginTop: "15px" }}>
               <div className="banner-icon">⚠️</div>
               <div>
@@ -49,6 +83,7 @@ export default function Step1({ selectedDomain, onNext }) {
           </div>
         </div>
 
+        {/* SAĞ KOLON */}
         <div>
           <div className="card">
             <div className="card-title">What Will Be Produced in Each Step</div>
@@ -99,28 +134,51 @@ export default function Step1({ selectedDomain, onNext }) {
                       patients
                     </td>
                   </tr>
+                  <tr>
+                    <td>
+                      <span className="tag info">5</span>
+                    </td>
+                    <td>Evaluation Report</td>
+                    <td>How accurately does the model predict readmission?</td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span className="tag info">6</span>
+                    </td>
+                    <td>Explanation</td>
+                    <td>
+                      Why did the model flag a specific patient as high risk?
+                    </td>
+                  </tr>
+                  <tr>
+                    <td>
+                      <span className="tag info">7</span>
+                    </td>
+                    <td>Ethics Checklist</td>
+                    <td>
+                      Is the model fair for all patient groups? Who oversees it?
+                    </td>
+                  </tr>
                 </tbody>
               </table>
             </div>
+            <div
+              className="banner good"
+              style={{
+                marginTop: "12px",
+                background: "#eefbf4",
+                borderColor: "#86d4a7",
+              }}
+            >
+              <div className="banner-icon">✅</div>
+              <div style={{ color: "#166534" }}>
+                <b>Remember:</b> A human doctor or nurse must always review the
+                model's suggestions. This tool helps you learn — it does not
+                make clinical decisions.
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div
-        className="screen-footer"
-        style={{
-          marginTop: "15px",
-          padding: "15px",
-          background: "white",
-          borderRadius: "12px",
-          border: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <button className="btn primary" onClick={onNext}>
-          Next Step →
-        </button>
       </div>
     </section>
   );

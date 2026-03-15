@@ -1,6 +1,38 @@
 import React from "react";
 
-export default function Step5({ onNext, onPrev }) {
+export default function Step5({ onNext, onPrev, trainResults }) {
+  if (!trainResults) {
+    return (
+      <section className="screen active">
+        <div
+          className="card"
+          style={{ padding: "50px", textAlign: "center", marginTop: "20px" }}
+        >
+          <h3 style={{ color: "var(--navy)" }}>Henüz Bir Model Eğitilmedi</h3>
+          <p style={{ color: "var(--mid)", marginTop: "10px" }}>
+            Lütfen 4. Adıma dönüp bir algoritma seçin ve "Train Model" butonuna
+            basın.
+          </p>
+          <button
+            className="btn primary"
+            style={{ marginTop: "20px" }}
+            onClick={onPrev}
+          >
+            ← 4. Adıma Dön
+          </button>
+        </div>
+      </section>
+    );
+  }
+
+  const { metrics, confusion_matrix, model_used } = trainResults;
+
+  // ROC Eğrisi için dinamik SVG Yüksekliği (AUC skoruna göre temsili eğim)
+  const rocCurvePath =
+    metrics.auc > 0.5
+      ? `M 0,200 Q 20,${200 - metrics.auc * 200} 200,0`
+      : `M 0,200 L 200,0`;
+
   return (
     <section className="screen active">
       <div className="screen-header">
@@ -9,8 +41,7 @@ export default function Step5({ onNext, onPrev }) {
           <h2>Results — How Well Does the Model Perform?</h2>
           <p>
             Here we evaluate the model's predictions on the test patients it has
-            never seen before. Accuracy alone is not enough — we examine
-            sensitivity and specificity.
+            never seen before.
           </p>
         </div>
         <div className="hdr-right">
@@ -21,90 +52,214 @@ export default function Step5({ onNext, onPrev }) {
       </div>
 
       <div className="cols">
-        {/* METRİKLER (Sol Taraf) */}
+        {/* SOL KOLON: METRİKLER VE ROC CURVE */}
         <div>
           <div className="card">
             <div className="card-title">
-              Performance Metrics — KNN (K=5) on Test Patients
+              Performance Metrics — {model_used.toUpperCase()}
             </div>
+
             <div
-              className="kpis"
               style={{
                 display: "grid",
                 gridTemplateColumns: "repeat(3, 1fr)",
                 gap: "10px",
               }}
             >
-              <div className="kpi">
-                <div className="kpi-val">78%</div>
-                <div className="kpi-name">Accuracy</div>
-              </div>
-              <div className="kpi warn">
-                <div className="kpi-val" style={{ color: "var(--warn)" }}>
-                  62%
+              <div
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: "12px",
+                  padding: "15px 10px",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "26px",
+                    fontWeight: 600,
+                    color: "var(--navy)",
+                  }}
+                >
+                  {metrics.accuracy}%
                 </div>
-                <div className="kpi-name">Sensitivity</div>
-              </div>
-              <div className="kpi good">
-                <div className="kpi-val" style={{ color: "var(--good)" }}>
-                  85%
+                <div
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--muted)",
+                    marginTop: "5px",
+                  }}
+                >
+                  ACCURACY
                 </div>
-                <div className="kpi-name">Specificity</div>
               </div>
-              <div className="kpi">
-                <div className="kpi-val">58%</div>
-                <div className="kpi-name">Precision</div>
-              </div>
-              <div className="kpi">
-                <div className="kpi-val">60%</div>
-                <div className="kpi-name">F1 Score</div>
-              </div>
-              <div className="kpi good">
-                <div className="kpi-val" style={{ color: "var(--good)" }}>
-                  0.81
+              <div
+                style={{
+                  border: `1px solid ${metrics.sensitivity < 50 ? "rgba(185,28,28,.4)" : "rgba(13,122,80,.2)"}`,
+                  background:
+                    metrics.sensitivity < 50 ? "#fef2f2" : "var(--good-bg)",
+                  borderRadius: "12px",
+                  padding: "15px 10px",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "26px",
+                    fontWeight: 600,
+                    color:
+                      metrics.sensitivity < 50 ? "var(--bad)" : "var(--good)",
+                  }}
+                >
+                  {metrics.sensitivity}%
                 </div>
-                <div className="kpi-name">AUC-ROC</div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color:
+                      metrics.sensitivity < 50 ? "var(--bad)" : "var(--good)",
+                    marginTop: "5px",
+                  }}
+                >
+                  SENSITIVITY ★
+                </div>
+              </div>
+              <div
+                style={{
+                  border: "1px solid rgba(13,122,80,.2)",
+                  background: "var(--good-bg)",
+                  borderRadius: "12px",
+                  padding: "15px 10px",
+                  textAlign: "center",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "26px",
+                    fontWeight: 600,
+                    color: "var(--good)",
+                  }}
+                >
+                  {metrics.specificity}%
+                </div>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 600,
+                    color: "var(--good)",
+                    marginTop: "5px",
+                  }}
+                >
+                  SPECIFICITY
+                </div>
               </div>
             </div>
-            <div className="banner bad" style={{ marginTop: "12px" }}>
-              <div className="banner-icon">⚠️</div>
-              <div>
-                <b>Low Sensitivity:</b> This model misses 38% of patients who
-                will actually be readmitted. Go back to Step 4 and try a
-                different model.
+
+            {/* DANGER BANNER: Sens < %50 ise */}
+            {metrics.sensitivity < 50 && (
+              <div
+                className="banner bad"
+                style={{
+                  marginTop: "15px",
+                  background: "#fef2f2",
+                  borderColor: "#fca5a5",
+                  padding: "12px",
+                }}
+              >
+                <div className="banner-icon">🚨</div>
+                <div style={{ color: "#991b1b" }}>
+                  <b>DANGER - Low Sensitivity:</b> Model misses more than half
+                  of the true cases. Unsafe for clinical deployment!
+                </div>
+              </div>
+            )}
+
+            {/* ROC CURVE (SVG) */}
+            <div style={{ marginTop: "25px" }}>
+              <div className="card-title">ROC Curve</div>
+              <div
+                style={{ display: "flex", gap: "20px", alignItems: "center" }}
+              >
+                <svg
+                  width="200"
+                  height="200"
+                  style={{
+                    background: "var(--paper)",
+                    borderLeft: "2px solid var(--ink)",
+                    borderBottom: "2px solid var(--ink)",
+                  }}
+                >
+                  {/* Diagonal Random Guess Line */}
+                  <path
+                    d="M 0,200 L 200,0"
+                    stroke="var(--muted)"
+                    strokeWidth="2"
+                    strokeDasharray="5,5"
+                    fill="none"
+                  />
+                  {/* Model ROC Curve */}
+                  <path
+                    d={rocCurvePath}
+                    stroke="var(--blue)"
+                    strokeWidth="3"
+                    fill="none"
+                  />
+                </svg>
+                <div>
+                  <div
+                    style={{
+                      fontSize: "32px",
+                      fontWeight: 700,
+                      color: "var(--blue)",
+                    }}
+                  >
+                    {metrics.auc}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: "var(--muted)",
+                    }}
+                  >
+                    AUC SCORE
+                  </div>
+                  <p
+                    style={{
+                      fontSize: "12px",
+                      color: "var(--mid)",
+                      marginTop: "10px",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    The closer the blue line is to the top-left corner (AUC =
+                    1.0), the better the model distinguishes between safe and
+                    high-risk patients.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        {/* HATA MATRİSİ (Sağ Taraf) */}
+        {/* SAĞ KOLON: CONFUSION MATRIX */}
         <div>
           <div className="card">
-            <div className="card-title">
-              Confusion Matrix — What Did the Model Get Right and Wrong?
-            </div>
-            <div
-              style={{
-                fontSize: "12px",
-                color: "var(--mid)",
-                marginBottom: "10px",
-              }}
-            >
-              This 2×2 table shows the model's predictions vs. what actually
-              happened.
-            </div>
-
+            <div className="card-title">Confusion Matrix</div>
             <div
               style={{
                 display: "grid",
                 gridTemplateColumns: "auto 1fr 1fr",
                 gap: "8px",
-                textAlign: "center",
+                marginTop: "15px",
               }}
             >
               <div></div>
               <div
                 style={{
+                  textAlign: "center",
                   fontSize: "11px",
                   fontWeight: 600,
                   color: "var(--muted)",
@@ -114,6 +269,7 @@ export default function Step5({ onNext, onPrev }) {
               </div>
               <div
                 style={{
+                  textAlign: "center",
                   fontSize: "11px",
                   fontWeight: 600,
                   color: "var(--muted)",
@@ -126,6 +282,7 @@ export default function Step5({ onNext, onPrev }) {
                 style={{
                   writingMode: "vertical-rl",
                   transform: "rotate(180deg)",
+                  textAlign: "center",
                   fontSize: "10px",
                   fontWeight: 600,
                   color: "var(--muted)",
@@ -137,54 +294,56 @@ export default function Step5({ onNext, onPrev }) {
                 style={{
                   background: "var(--good-bg)",
                   border: "1px solid rgba(13,122,80,.2)",
-                  padding: "15px",
                   borderRadius: "10px",
+                  padding: "20px",
+                  textAlign: "center",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "22px",
+                    fontSize: "26px",
                     fontWeight: 700,
                     color: "var(--good)",
                   }}
                 >
-                  36
+                  {confusion_matrix.tn}
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "11px",
                     color: "var(--good)",
                     marginTop: "5px",
                   }}
                 >
-                  ✅ Correctly called safe
+                  ✅ True Negative
                 </div>
               </div>
               <div
                 style={{
                   background: "var(--warn-bg)",
                   border: "1px solid rgba(160,92,0,.2)",
-                  padding: "15px",
                   borderRadius: "10px",
+                  padding: "20px",
+                  textAlign: "center",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "22px",
+                    fontSize: "26px",
                     fontWeight: 700,
                     color: "var(--warn)",
                   }}
                 >
-                  5
+                  {confusion_matrix.fp}
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "11px",
                     color: "var(--warn)",
                     marginTop: "5px",
                   }}
                 >
-                  ⚠️ False alarm
+                  ⚠️ False Positive
                 </div>
               </div>
 
@@ -192,6 +351,7 @@ export default function Step5({ onNext, onPrev }) {
                 style={{
                   writingMode: "vertical-rl",
                   transform: "rotate(180deg)",
+                  textAlign: "center",
                   fontSize: "10px",
                   fontWeight: 600,
                   color: "var(--muted)",
@@ -203,63 +363,68 @@ export default function Step5({ onNext, onPrev }) {
                 style={{
                   background: "var(--bad-bg)",
                   border: "1px solid rgba(185,28,28,.2)",
-                  padding: "15px",
                   borderRadius: "10px",
+                  padding: "20px",
+                  textAlign: "center",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "22px",
+                    fontSize: "26px",
                     fontWeight: 700,
                     color: "var(--bad)",
                   }}
                 >
-                  8
+                  {confusion_matrix.fn}
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "11px",
                     color: "var(--bad)",
                     marginTop: "5px",
                   }}
                 >
-                  ❌ Missed case
+                  ❌ False Negative
                 </div>
               </div>
               <div
                 style={{
                   background: "var(--good-bg)",
                   border: "1px solid rgba(13,122,80,.2)",
-                  padding: "15px",
                   borderRadius: "10px",
+                  padding: "20px",
+                  textAlign: "center",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "22px",
+                    fontSize: "26px",
                     fontWeight: 700,
                     color: "var(--good)",
                   }}
                 >
-                  12
+                  {confusion_matrix.tp}
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "11px",
                     color: "var(--good)",
                     marginTop: "5px",
                   }}
                 >
-                  ✅ Correctly flagged
+                  ✅ True Positive
                 </div>
               </div>
             </div>
 
-            <div className="banner bad" style={{ marginTop: "15px" }}>
-              <div className="banner-icon">❌</div>
+            <div className="banner info" style={{ marginTop: "20px" }}>
+              <div className="banner-icon">ℹ️</div>
               <div>
-                <b>8 patients were missed (False Negatives).</b> These patients
-                were sent home without extra support but returned to hospital.
+                <b>Clinical Translation:</b> The model missed{" "}
+                {confusion_matrix.fn} true cases, but caught{" "}
+                {confusion_matrix.tp}. False alarms ({confusion_matrix.fp}) mean
+                unnecessary checks, but False Negatives ({confusion_matrix.fn})
+                are safety risks.
               </div>
             </div>
           </div>

@@ -7,8 +7,9 @@ import Step2 from "./components/Step2";
 import Step3 from "./components/Step3";
 import Step4 from "./components/Step4";
 import Step5 from "./components/Step5";
-import Step6 from "./components/Step6"; // Yeni eklendi
-import Step7 from "./components/Step7"; // Yeni eklendi
+import Step6 from "./components/Step6";
+import Step7 from "./components/Step7";
+import NavigationModal from "./components/NavigationModal"; // YENİ: Modalı import et
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -21,17 +22,54 @@ function App() {
     "Diabetes",
     "Pulmonology",
     "Sepsis / ICU",
+    "Fetal Health",
+    "Dermatology",
+    "Stroke Risk",
   ];
 
-  // Backend'e gidip gelen veriler
   const [file, setFile] = useState(null);
   const [datasetInfo, setDatasetInfo] = useState(null);
   const [targetColumn, setTargetColumn] = useState("");
+  const [trainResults, setTrainResults] = useState(null);
+
+  // YENİ: Navigasyon Modalı'nın açık/kapalı durumunu tutan state
+  const [isNavModalOpen, setIsNavModalOpen] = useState(false);
+
+  // 🛡️ GATEKEEPER FONKSİYONU (GÜNCELLENDİ)
+  const handleStepChange = (newStep) => {
+    // 1. KURAL: Kullanıcı geriye gitmek istiyorsa her zaman izin ver
+    if (newStep < currentStep) {
+      setCurrentStep(newStep);
+      return;
+    }
+
+    // 2. KURAL: (SENİN İSTEDİĞİN ZORUNLULUK - MODAL İLE)
+    // Eğer kullanıcı 3. veya daha ileri bir adıma geçmeye çalışıyorsa ve Hedef Sütun yoksa:
+    if (newStep >= 3 && !targetColumn) {
+      // alert'i sildik, yerine modalı açıyoruz!
+      setIsNavModalOpen(true);
+      setCurrentStep(2); // Zorla Step 2'ye geri at
+      return;
+    }
+
+    // Eğer tüm kurallardan başarıyla geçerse adımı değiştir
+    setCurrentStep(newStep);
+  };
+
+  // Modalı kapatan fonksiyon
+  const closeNavModal = () => {
+    setIsNavModalOpen(false);
+  };
+
+  // Modaldaki "Go to Step 2" butonuna basınca Step 2'ye zorla götüren fonksiyon
+  const goToStep2 = () => {
+    setIsNavModalOpen(false); // Önce modalı kapat
+    setCurrentStep(2); // Sonra zorla Step 2'ye at
+  };
 
   return (
     <>
       <Navbar selectedDomain={selectedDomain} />
-
       <div className="wrap">
         <div className="domain-bar">
           {domains.map((d) => (
@@ -45,19 +83,19 @@ function App() {
           ))}
         </div>
 
-        <Stepper currentStep={currentStep} setCurrentStep={setCurrentStep} />
+        {/* Stepper'a Gatekeeper'ı veriyoruz */}
+        <Stepper currentStep={currentStep} setCurrentStep={handleStepChange} />
 
         {currentStep === 1 && (
           <Step1
             selectedDomain={selectedDomain}
-            onNext={() => setCurrentStep(2)}
+            onNext={() => handleStepChange(2)}
           />
         )}
-
         {currentStep === 2 && (
           <Step2
-            onNext={() => setCurrentStep(3)}
-            onPrev={() => setCurrentStep(1)}
+            onNext={() => handleStepChange(3)}
+            onPrev={() => handleStepChange(1)}
             file={file}
             setFile={setFile}
             datasetInfo={datasetInfo}
@@ -66,35 +104,45 @@ function App() {
             setTargetColumn={setTargetColumn}
           />
         )}
-
         {currentStep === 3 && (
           <Step3
-            onNext={() => setCurrentStep(4)}
-            onPrev={() => setCurrentStep(2)}
+            onNext={() => handleStepChange(4)}
+            onPrev={() => handleStepChange(2)}
             file={file}
             targetColumn={targetColumn}
           />
         )}
         {currentStep === 4 && (
           <Step4
-            onNext={() => setCurrentStep(5)}
-            onPrev={() => setCurrentStep(3)}
+            onNext={() => handleStepChange(5)}
+            onPrev={() => handleStepChange(3)}
+            file={file}
+            targetColumn={targetColumn}
+            setTrainResults={setTrainResults}
           />
         )}
         {currentStep === 5 && (
           <Step5
-            onNext={() => setCurrentStep(6)}
-            onPrev={() => setCurrentStep(4)}
+            onNext={() => handleStepChange(6)}
+            onPrev={() => handleStepChange(4)}
+            trainResults={trainResults}
           />
         )}
         {currentStep === 6 && (
           <Step6
-            onNext={() => setCurrentStep(7)}
-            onPrev={() => setCurrentStep(5)}
+            onNext={() => handleStepChange(7)}
+            onPrev={() => handleStepChange(5)}
           />
         )}
-        {currentStep === 7 && <Step7 onPrev={() => setCurrentStep(6)} />}
+        {currentStep === 7 && <Step7 onPrev={() => handleStepChange(6)} />}
       </div>
+
+      {/* YENİ: Navigasyon Modalı'nı buraya ekliyoruz */}
+      <NavigationModal
+        isOpen={isNavModalOpen}
+        onClose={closeNavModal}
+        onGoToStep2={goToStep2}
+      />
     </>
   );
 }

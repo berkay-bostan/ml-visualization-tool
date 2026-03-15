@@ -1,8 +1,6 @@
-import React, { useState } from "react";
+import React from "react";
 
 export default function Step6({ onNext, onPrev }) {
-  const [selectedPatient, setSelectedPatient] = useState("Patient #47");
-
   return (
     <section className="screen active">
       <div className="screen-header">
@@ -12,7 +10,7 @@ export default function Step6({ onNext, onPrev }) {
           <p>
             A model that cannot explain itself should not be trusted in clinical
             settings. Here we look at which patient measurements were most
-            important.
+            important, and why a specific patient was flagged as high risk.
           </p>
         </div>
         <div className="hdr-right">
@@ -23,19 +21,19 @@ export default function Step6({ onNext, onPrev }) {
       </div>
 
       <div className="cols">
-        {/* SOL TARAF: GENEL ÖZELLİK ÖNEMİ */}
+        {/* SOL KOLON */}
         <div>
           <div className="card">
             <div className="card-title">
               Most Important Patient Measurements (Overall)
             </div>
-            <div className="bars" style={{ display: "grid", gap: "9px" }}>
+            <div className="bars" style={{ display: "grid", gap: "12px" }}>
               <div
                 style={{ display: "flex", alignItems: "center", gap: "10px" }}
               >
                 <div
                   style={{
-                    width: "150px",
+                    width: "120px",
                     fontSize: "12px",
                     color: "var(--mid)",
                     textAlign: "right",
@@ -49,25 +47,19 @@ export default function Step6({ onNext, onPrev }) {
                     height: "10px",
                     borderRadius: "999px",
                     background: "var(--line)",
-                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
                       width: "82%",
                       height: "100%",
-                      background:
-                        "linear-gradient(90deg,var(--navy),var(--blue))",
+                      borderRadius: "999px",
+                      background: "var(--navy)",
                     }}
                   ></div>
                 </div>
                 <div
-                  style={{
-                    width: "44px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--mid)",
-                  }}
+                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
                 >
                   0.28
                 </div>
@@ -77,7 +69,7 @@ export default function Step6({ onNext, onPrev }) {
               >
                 <div
                   style={{
-                    width: "150px",
+                    width: "120px",
                     fontSize: "12px",
                     color: "var(--mid)",
                     textAlign: "right",
@@ -91,25 +83,19 @@ export default function Step6({ onNext, onPrev }) {
                     height: "10px",
                     borderRadius: "999px",
                     background: "var(--line)",
-                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
                       width: "66%",
                       height: "100%",
-                      background:
-                        "linear-gradient(90deg,var(--navy),var(--blue))",
+                      borderRadius: "999px",
+                      background: "var(--navy)",
                     }}
                   ></div>
                 </div>
                 <div
-                  style={{
-                    width: "44px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--mid)",
-                  }}
+                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
                 >
                   0.22
                 </div>
@@ -119,7 +105,7 @@ export default function Step6({ onNext, onPrev }) {
               >
                 <div
                   style={{
-                    width: "150px",
+                    width: "120px",
                     fontSize: "12px",
                     color: "var(--mid)",
                     textAlign: "right",
@@ -133,35 +119,147 @@ export default function Step6({ onNext, onPrev }) {
                     height: "10px",
                     borderRadius: "999px",
                     background: "var(--line)",
-                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
                       width: "54%",
                       height: "100%",
-                      background:
-                        "linear-gradient(90deg,var(--navy),var(--blue))",
+                      borderRadius: "999px",
+                      background: "var(--navy)",
                     }}
                   ></div>
                 </div>
                 <div
-                  style={{
-                    width: "44px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--mid)",
-                  }}
+                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
                 >
                   0.17
                 </div>
               </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <div
+                  style={{
+                    width: "120px",
+                    fontSize: "12px",
+                    color: "var(--mid)",
+                    textAlign: "right",
+                  }}
+                >
+                  Time in Hospital
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: "10px",
+                    borderRadius: "999px",
+                    background: "var(--line)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "40%",
+                      height: "100%",
+                      borderRadius: "999px",
+                      background: "var(--navy)",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
+                >
+                  0.13
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <div
+                  style={{
+                    width: "120px",
+                    fontSize: "12px",
+                    color: "var(--mid)",
+                    textAlign: "right",
+                  }}
+                >
+                  Serum Sodium
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: "10px",
+                    borderRadius: "999px",
+                    background: "var(--line)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "28%",
+                      height: "100%",
+                      borderRadius: "999px",
+                      background: "var(--navy)",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
+                >
+                  0.09
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <div
+                  style={{
+                    width: "120px",
+                    fontSize: "12px",
+                    color: "var(--mid)",
+                    textAlign: "right",
+                  }}
+                >
+                  Smoking Status
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: "10px",
+                    borderRadius: "999px",
+                    background: "var(--line)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "16%",
+                      height: "100%",
+                      borderRadius: "999px",
+                      background: "var(--navy)",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
+                >
+                  0.05
+                </div>
+              </div>
             </div>
-            <div className="banner info" style={{ marginTop: "15px" }}>
+
+            <div
+              className="banner info"
+              style={{
+                marginTop: "15px",
+                background: "#eff6ff",
+                borderColor: "#bfdbfe",
+              }}
+            >
               <div className="banner-icon">💡</div>
-              <div>
-                <b>Clinical sense check:</b> Ejection fraction and creatinine
-                are the top predictors. This makes strong clinical sense.
+              <div style={{ color: "#1e40af" }}>
+                <b>Clinical sense check:</b> Ejection fraction (how well the
+                heart pumps) and creatinine (kidney function) are the top
+                predictors. This makes strong clinical sense — both are
+                established readmission risk factors in heart failure.
               </div>
             </div>
           </div>
@@ -169,50 +267,49 @@ export default function Step6({ onNext, onPrev }) {
           <div className="card">
             <div className="card-title">Single Patient Explanation</div>
             <label className="lbl">Select a Test Patient</label>
-            <select
-              className="sel"
-              value={selectedPatient}
-              onChange={(e) => setSelectedPatient(e.target.value)}
-            >
-              <option>Patient #47 · Age 71 · EF 20% · HIGH RISK</option>
-              <option>Patient #12 · Age 45 · EF 55% · LOW RISK</option>
+            <select className="sel">
+              <option>
+                Patient #47 · Age 71 · Ejection Fraction 20% · Pr...
+              </option>
             </select>
             <button
               className="btn teal"
-              style={{ width: "100%", marginTop: "10px" }}
+              style={{ width: "100%", marginTop: "12px" }}
             >
               Explain This Patient →
             </button>
           </div>
         </div>
 
-        {/* SAĞ TARAF: TEK HASTA AÇIKLAMASI (WATERFALL CHART MANTIĞI) */}
+        {/* SAĞ KOLON */}
         <div>
           <div className="card">
             <div className="card-title">
-              Why Was {selectedPatient.split("·")[0]} Flagged? (78% probability)
+              Why Was Patient #47 Flagged as HIGH RISK? (78% probability)
             </div>
             <div
               style={{
                 fontSize: "12px",
                 color: "var(--mid)",
-                marginBottom: "15px",
+                marginBottom: "20px",
               }}
             >
               Each bar shows how much a measurement pushed the prediction toward
-              or away from readmission.
+              or away from readmission. The longer the bar, the stronger the
+              effect.
             </div>
 
-            <div className="bars" style={{ display: "grid", gap: "9px" }}>
+            <div className="bars" style={{ display: "grid", gap: "12px" }}>
               <div
                 style={{ display: "flex", alignItems: "center", gap: "10px" }}
               >
                 <div
                   style={{
-                    width: "150px",
+                    width: "130px",
                     fontSize: "12px",
                     color: "var(--bad)",
                     textAlign: "right",
+                    fontWeight: 500,
                   }}
                 >
                   ↑ EF very low (20%)
@@ -223,20 +320,20 @@ export default function Step6({ onNext, onPrev }) {
                     height: "10px",
                     borderRadius: "999px",
                     background: "var(--line)",
-                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
-                      width: "80%",
+                      width: "85%",
                       height: "100%",
-                      background: "linear-gradient(90deg,var(--bad),#ef4444)",
+                      borderRadius: "999px",
+                      background: "var(--bad)",
                     }}
                   ></div>
                 </div>
                 <div
                   style={{
-                    width: "44px",
+                    width: "40px",
                     fontSize: "12px",
                     fontWeight: 600,
                     color: "var(--bad)",
@@ -250,10 +347,11 @@ export default function Step6({ onNext, onPrev }) {
               >
                 <div
                   style={{
-                    width: "150px",
+                    width: "130px",
                     fontSize: "12px",
                     color: "var(--bad)",
                     textAlign: "right",
+                    fontWeight: 500,
                   }}
                 >
                   ↑ Age 71
@@ -264,20 +362,20 @@ export default function Step6({ onNext, onPrev }) {
                     height: "10px",
                     borderRadius: "999px",
                     background: "var(--line)",
-                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
-                      width: "58%",
+                      width: "60%",
                       height: "100%",
-                      background: "linear-gradient(90deg,var(--bad),#ef4444)",
+                      borderRadius: "999px",
+                      background: "var(--bad)",
                     }}
                   ></div>
                 </div>
                 <div
                   style={{
-                    width: "44px",
+                    width: "40px",
                     fontSize: "12px",
                     fontWeight: 600,
                     color: "var(--bad)",
@@ -291,10 +389,53 @@ export default function Step6({ onNext, onPrev }) {
               >
                 <div
                   style={{
-                    width: "150px",
+                    width: "130px",
+                    fontSize: "12px",
+                    color: "var(--bad)",
+                    textAlign: "right",
+                    fontWeight: 500,
+                  }}
+                >
+                  ↑ Creatinine 2.1
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: "10px",
+                    borderRadius: "999px",
+                    background: "var(--line)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "45%",
+                      height: "100%",
+                      borderRadius: "999px",
+                      background: "var(--bad)",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    width: "40px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--bad)",
+                  }}
+                >
+                  +0.12
+                </div>
+              </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <div
+                  style={{
+                    width: "130px",
                     fontSize: "12px",
                     color: "var(--good)",
                     textAlign: "right",
+                    fontWeight: 500,
                   }}
                 >
                   ↓ Non-smoker
@@ -305,20 +446,20 @@ export default function Step6({ onNext, onPrev }) {
                     height: "10px",
                     borderRadius: "999px",
                     background: "var(--line)",
-                    overflow: "hidden",
                   }}
                 >
                   <div
                     style={{
                       width: "20%",
                       height: "100%",
-                      background: "linear-gradient(90deg,var(--teal),#18c9b4)",
+                      borderRadius: "999px",
+                      background: "var(--teal)",
                     }}
                   ></div>
                 </div>
                 <div
                   style={{
-                    width: "44px",
+                    width: "40px",
                     fontSize: "12px",
                     fontWeight: 600,
                     color: "var(--good)",
@@ -327,13 +468,80 @@ export default function Step6({ onNext, onPrev }) {
                   -0.05
                 </div>
               </div>
+              <div
+                style={{ display: "flex", alignItems: "center", gap: "10px" }}
+              >
+                <div
+                  style={{
+                    width: "130px",
+                    fontSize: "12px",
+                    color: "var(--good)",
+                    textAlign: "right",
+                    fontWeight: 500,
+                  }}
+                >
+                  ↓ Sodium normal
+                </div>
+                <div
+                  style={{
+                    flex: 1,
+                    height: "10px",
+                    borderRadius: "999px",
+                    background: "var(--line)",
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "15%",
+                      height: "100%",
+                      borderRadius: "999px",
+                      background: "var(--teal)",
+                    }}
+                  ></div>
+                </div>
+                <div
+                  style={{
+                    width: "40px",
+                    fontSize: "12px",
+                    fontWeight: 600,
+                    color: "var(--good)",
+                  }}
+                >
+                  -0.03
+                </div>
+              </div>
             </div>
 
-            <div className="banner warn" style={{ marginTop: "15px" }}>
+            <div
+              className="banner warn"
+              style={{
+                marginTop: "25px",
+                background: "#fffbeb",
+                borderColor: "#fde68a",
+              }}
+            >
               <div className="banner-icon">⚠️</div>
-              <div>
-                <b>Important:</b> These are associations, not causes. A
-                clinician must decide whether and how to act.
+              <div style={{ color: "#92400e" }}>
+                <b>Important:</b> These are associations, not causes. The model
+                says ejection fraction is important for this prediction — a
+                cardiologist must decide whether and how to act.
+              </div>
+            </div>
+
+            <div
+              className="banner info"
+              style={{
+                marginTop: "10px",
+                background: "#eff6ff",
+                borderColor: "#bfdbfe",
+              }}
+            >
+              <div className="banner-icon">💡</div>
+              <div style={{ color: "#1e40af" }}>
+                <b>What-if:</b> What if this patient's creatinine were 1.2
+                instead of 2.1? The predicted risk would drop to approximately
+                61%. This kind of thinking helps assess which interventions
+                might help.
               </div>
             </div>
           </div>

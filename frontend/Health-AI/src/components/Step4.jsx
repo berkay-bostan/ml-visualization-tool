@@ -1,27 +1,89 @@
 import React, { useState, useEffect, useRef } from "react";
 
-export default function Step4({ onNext, onPrev }) {
-  const [activeModel, setActiveModel] = useState("knn");
+export default function Step4({
+  onNext,
+  onPrev,
+  file,
+  targetColumn,
+  setTrainResults,
+}) {
   const [knnK, setKnnK] = useState(5);
+  const [activeModel, setActiveModel] = useState("knn");
+  const [isTraining, setIsTraining] = useState(false);
+  const [autoRetrain, setAutoRetrain] = useState(true);
+
+  // Eğitilen modellerin listesi (Karşılaştırma için)
+  const [compareList, setCompareList] = useState([]);
+  const [latestResult, setLatestResult] = useState(null);
+
   const canvasRef = useRef(null);
 
-  // KNN Grafiğini Çizdiren Fonksiyon
-  useEffect(() => {
-    if (activeModel !== "knn" || !canvasRef.current) return;
+  // FastAPI'ye model eğitimi için istek atan ana fonksiyon
+  const handleTrain = async (silent = false) => {
+    if (!file || !targetColumn) return;
 
+    if (!silent) setIsTraining(true);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_column", targetColumn);
+    formData.append("algorithm", activeModel);
+    formData.append("knn_k", knnK);
+    formData.append("test_size", 0.2);
+
+    try {
+      const response = await fetch("http://127.0.0.1:8000/train", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await response.json();
+
+      if (data.status === "success") {
+        setTrainResults(data);
+        setLatestResult({
+          id: `${activeModel}-${activeModel === "knn" ? knnK : "default"}`,
+          name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK})` : ""}`,
+          ...data.metrics,
+        });
+      }
+    } catch (err) {
+      console.error("Eğitim Hatası", err);
+    } finally {
+      if (!silent) setIsTraining(false);
+    }
+  };
+
+  // 🌟 AUTO-RETRAIN (Debounce): Kaydırıcı değiştiğinde 300ms bekleyip otomatik eğit
+  useEffect(() => {
+    if (!autoRetrain || !file || !targetColumn) return;
+    const timer = setTimeout(() => {
+      handleTrain(true); // Sessizce arka planda eğit
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [knnK, activeModel, autoRetrain]);
+
+  // Modeli Tabloya Ekleme (+ Compare Butonu)
+  const addToCompare = () => {
+    if (!latestResult) return;
+    // Aynı modelden (kopya) varsa ekleme
+    if (!compareList.find((m) => m.id === latestResult.id)) {
+      setCompareList([...compareList, latestResult]);
+    }
+  };
+
+  // KNN Grafiğini Çizen Animasyon
+  useEffect(() => {
+    if (activeModel !== "knn") return;
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext("2d");
     const w = canvas.offsetWidth;
     const h = canvas.offsetHeight;
-
-    // Yüksek çözünürlük için ayar
     const dpr = window.devicePixelRatio || 1;
     canvas.width = w * dpr;
     canvas.height = h * dpr;
     ctx.scale(dpr, dpr);
     ctx.clearRect(0, 0, w, h);
 
-    // Temsili hasta verileri (x, y kordinatları ve durumları)
     const pts = [
       [0.2, 0.3, 0],
       [0.25, 0.55, 0],
@@ -39,9 +101,8 @@ export default function Step4({ onNext, onPrev }) {
       [0.6, 0.8, 1],
       [0.85, 0.4, 0],
     ];
-    const newPt = [0.48, 0.52]; // Yeni Hasta (Yıldız)
+    const newPt = [0.48, 0.52];
 
-    // Mesafeleri hesapla ve K kadar en yakın komşuyu bul
     const dists = pts.map(([px, py, c], i) => ({
       i,
       dist: Math.hypot(px - newPt[0], py - newPt[1]),
@@ -51,7 +112,6 @@ export default function Step4({ onNext, onPrev }) {
     const neighbors = new Set(dists.slice(0, knnK).map((d) => d.i));
     const kRadius = dists[knnK - 1]?.dist || 0.1;
 
-    // Etki Alanını (Daireyi) Çiz
     ctx.beginPath();
     ctx.arc(
       newPt[0] * w,
@@ -68,7 +128,6 @@ export default function Step4({ onNext, onPrev }) {
     ctx.fillStyle = "rgba(26,107,154,0.05)";
     ctx.fill();
 
-    // Diğer Hastaları (Noktaları) Çiz
     pts.forEach(([px, py, c], i) => {
       ctx.beginPath();
       ctx.arc(px * w, py * h, neighbors.has(i) ? 7 : 5, 0, Math.PI * 2);
@@ -76,13 +135,11 @@ export default function Step4({ onNext, onPrev }) {
         c === 1
           ? neighbors.has(i)
             ? "#B91C1C"
-            : "rgba(185,28,28,0.35)"
+            : "rgba(185,28,28,0.4)"
           : neighbors.has(i)
             ? "#0D7A50"
-            : "rgba(13,122,80,0.35)";
+            : "rgba(13,122,80,0.4)";
       ctx.fill();
-
-      // Eğer komşuysa araya çizgi çek
       if (neighbors.has(i)) {
         ctx.strokeStyle = c === 1 ? "#B91C1C" : "#0D7A50";
         ctx.lineWidth = 2;
@@ -96,15 +153,14 @@ export default function Step4({ onNext, onPrev }) {
       }
     });
 
-    // Yeni Hastayı (Yıldız) Çiz
     const sx = newPt[0] * w,
       sy = newPt[1] * h,
       sr = 10;
     ctx.fillStyle = "#0D2340";
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
-      const a = (i * 4 * Math.PI) / 5 - Math.PI / 2;
-      const b = (i * 4 * Math.PI) / 5 + (2 * Math.PI) / 5 - Math.PI / 2;
+      const a = (i * 4 * Math.PI) / 5 - Math.PI / 2,
+        b = (i * 4 * Math.PI) / 5 + (2 * Math.PI) / 5 - Math.PI / 2;
       if (i === 0) ctx.moveTo(sx + sr * Math.cos(a), sy + sr * Math.sin(a));
       else ctx.lineTo(sx + sr * Math.cos(a), sy + sr * Math.sin(a));
       ctx.lineTo(sx + sr * 0.4 * Math.cos(b), sy + sr * 0.4 * Math.sin(b));
@@ -125,168 +181,186 @@ export default function Step4({ onNext, onPrev }) {
           </p>
         </div>
         <div className="hdr-right">
-          <button className="btn primary" onClick={onNext}>
+          <div
+            style={{
+              fontSize: "11px",
+              color: "var(--muted)",
+              fontWeight: 600,
+              display: "flex",
+              alignItems: "center",
+              gap: "5px",
+            }}
+          >
+            Auto-retrain on change:
+            <input
+              type="checkbox"
+              checked={autoRetrain}
+              onChange={(e) => setAutoRetrain(e.target.checked)}
+            />{" "}
+            On
+          </div>
+          <button
+            className="btn primary"
+            onClick={() => {
+              handleTrain();
+              onNext();
+            }}
+            disabled={isTraining || !latestResult}
+          >
             Next Step →
           </button>
         </div>
       </div>
 
       <div className="cols">
-        {/* SOL PANEL: AYARLAR */}
+        {/* SOL KOLON */}
         <div>
           <div className="card">
             <div className="card-title">Choose Algorithm</div>
-            <div className="domain-bar" style={{ marginBottom: "15px" }}>
-              <div
-                className={`domain-pill ${activeModel === "knn" ? "active" : ""}`}
-                onClick={() => setActiveModel("knn")}
-              >
-                KNN
-              </div>
-              <div
-                className={`domain-pill ${activeModel === "svm" ? "active" : ""}`}
-                onClick={() => setActiveModel("svm")}
-              >
-                SVM
-              </div>
-              <div
-                className={`domain-pill ${activeModel === "dt" ? "active" : ""}`}
-                onClick={() => setActiveModel("dt")}
-              >
-                Decision Tree
-              </div>
+            <div
+              className="model-tabs"
+              style={{
+                display: "flex",
+                gap: "8px",
+                flexWrap: "wrap",
+                marginBottom: "15px",
+              }}
+            >
+              {["knn", "svm", "dt", "rf", "lr", "nb"].map((model) => (
+                <div
+                  key={model}
+                  onClick={() => setActiveModel(model)}
+                  style={{
+                    cursor: "pointer",
+                    padding: "8px 16px",
+                    borderRadius: "10px",
+                    fontSize: "12px",
+                    background: activeModel === model ? "var(--navy)" : "white",
+                    color: activeModel === model ? "#fff" : "var(--mid)",
+                    border:
+                      activeModel === model ? "none" : "1px solid var(--line2)",
+                  }}
+                >
+                  {model.toUpperCase()}
+                </div>
+              ))}
             </div>
 
             {activeModel === "knn" && (
               <>
-                <div
-                  style={{
-                    background: "var(--sky)",
-                    padding: "12px",
-                    borderRadius: "10px",
-                    fontSize: "12px",
-                    marginBottom: "15px",
-                  }}
-                >
-                  <b>K-Nearest Neighbors (KNN)</b> — Finds the K most similar
-                  past patients and predicts based on their outcomes.
-                </div>
                 <div className="card-title">Parameters</div>
                 <label className="lbl">
-                  K — Number of Similar Patients to Compare: <b>{knnK}</b>
+                  K — Number of Similar Patients to Compare
                 </label>
-                <input
-                  type="range"
-                  min="1"
-                  max="15"
-                  step="1"
-                  value={knnK}
-                  onChange={(e) => setKnnK(e.target.value)}
-                  style={{ width: "100%", marginBottom: "15px" }}
-                />
-                <button className="btn teal" style={{ width: "100%" }}>
-                  ⚡ Train Model
-                </button>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                >
+                  <input
+                    type="range"
+                    min="1"
+                    max="25"
+                    step="1"
+                    value={knnK}
+                    onChange={(e) => setKnnK(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <div
+                    style={{
+                      padding: "4px 8px",
+                      background: "var(--sky)",
+                      color: "var(--navy)",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                      border: "1px solid var(--line2)",
+                    }}
+                  >
+                    {knnK}
+                  </div>
+                </div>
               </>
             )}
 
-            {activeModel !== "knn" && (
-              <p style={{ color: "var(--mid)", fontSize: "13px" }}>
-                This model's parameters will be available soon.
-              </p>
-            )}
+            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
+              <button
+                className="btn teal"
+                style={{ flex: 1 }}
+                onClick={() => handleTrain(false)}
+                disabled={isTraining}
+              >
+                {isTraining ? "⏳ Eğitiliyor..." : "⚡ Train Model"}
+              </button>
+              <button
+                className="btn outline"
+                onClick={addToCompare}
+                disabled={!latestResult}
+              >
+                + Compare
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* SAĞ PANEL: GRAFİK VE SONUÇLAR */}
+        {/* SAĞ KOLON */}
         <div>
-          {activeModel === "knn" ? (
+          {activeModel === "knn" && (
             <div className="card">
-              <div className="card-title">
-                KNN Visualisation — How the Algorithm Thinks
-              </div>
-              <p
-                style={{
-                  fontSize: "12px",
-                  color: "var(--mid)",
-                  marginBottom: "10px",
-                }}
-              >
-                Each dot is a past patient. The ★ is a new patient. The
-                highlighted ring shows the <b>{knnK}</b> nearest neighbours used
-                to make the prediction.
-              </p>
-
-              {/* CANVAS: Grafiğin çizildiği yer */}
+              <div className="card-title">KNN Visualisation</div>
               <canvas
                 ref={canvasRef}
                 style={{
                   width: "100%",
-                  height: "240px",
+                  height: "220px",
                   background: "var(--paper)",
                   borderRadius: "12px",
                   border: "1px solid var(--line)",
                 }}
-              />
-
-              <div
-                style={{
-                  display: "flex",
-                  gap: "15px",
-                  marginTop: "15px",
-                  fontSize: "11px",
-                  color: "var(--mid)",
-                }}
-              >
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
-                >
-                  <div
-                    style={{
-                      width: "10px",
-                      height: "10px",
-                      borderRadius: "50%",
-                      background: "var(--bad)",
-                    }}
-                  ></div>{" "}
-                  Readmitted
-                </span>
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
-                >
-                  <div
-                    style={{
-                      width: "10px",
-                      height: "10px",
-                      borderRadius: "50%",
-                      background: "var(--good)",
-                    }}
-                  ></div>{" "}
-                  Not Readmitted
-                </span>
-                <span
-                  style={{ display: "flex", alignItems: "center", gap: "5px" }}
-                >
-                  ★ New Patient
-                </span>
-              </div>
+              ></canvas>
             </div>
-          ) : (
-            <div
-              className="card"
-              style={{
-                textAlign: "center",
-                padding: "50px 20px",
-                color: "var(--muted)",
-              }}
-            >
-              <h3>Select KNN to see the interactive visualization</h3>
+          )}
+
+          {/* KARŞILAŞTIRMA TABLOSU */}
+          {compareList.length > 0 && (
+            <div className="card" style={{ marginTop: "15px" }}>
+              <div className="card-title">Model Comparison</div>
+              <div className="tbl-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Model & Settings</th>
+                      <th>Accuracy</th>
+                      <th>Sensitivity ★</th>
+                      <th>Specificity</th>
+                      <th>AUC</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {compareList.map((res, i) => (
+                      <tr key={i}>
+                        <td style={{ fontWeight: 600 }}>{res.name}</td>
+                        <td>{res.accuracy}%</td>
+                        <td
+                          style={{
+                            color:
+                              res.sensitivity < 70
+                                ? "var(--bad)"
+                                : "var(--good)",
+                            fontWeight: 600,
+                          }}
+                        >
+                          {res.sensitivity}%
+                        </td>
+                        <td>{res.specificity}%</td>
+                        <td>{res.auc}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </div>
       </div>
 
-      {/* ALT BUTONLAR */}
       <div
         className="screen-footer"
         style={{
@@ -301,9 +375,6 @@ export default function Step4({ onNext, onPrev }) {
       >
         <button className="btn outline" onClick={onPrev}>
           ← Previous
-        </button>
-        <button className="btn primary" onClick={onNext}>
-          Next Step →
         </button>
       </div>
     </section>
