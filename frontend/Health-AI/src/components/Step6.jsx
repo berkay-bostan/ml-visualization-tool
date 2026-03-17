@@ -1,6 +1,67 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 
-export default function Step6({ onNext, onPrev }) {
+export default function Step6({ onNext, onPrev, file, targetColumn, selectedDomain }) {
+  const [explainData, setExplainData] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [selectedPatientIdx, setSelectedPatientIdx] = useState(null);
+  const [whatIfFeature, setWhatIfFeature] = useState(null);
+
+  const fetchExplanation = async (patientIdx = null) => {
+    if (!file || !targetColumn) {
+      setError("File or target column is missing. Go back to Step 2.");
+      return;
+    }
+    setLoading(true);
+    setError(null);
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_column", targetColumn);
+    if (patientIdx !== null) {
+      formData.append("patient_index", patientIdx);
+    }
+
+    try {
+      const resp = await fetch("http://127.0.0.1:8000/explain", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await resp.json();
+      if (data.status === "success") {
+        setExplainData(data);
+        if (patientIdx === null) {
+          setSelectedPatientIdx(data.patient_explanation.patient_index);
+        }
+        setWhatIfFeature(null);
+      } else {
+        setError(data.message);
+      }
+    } catch (err) {
+      setError("Could not connect to backend. Is FastAPI running?");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (file && targetColumn && !explainData) {
+      fetchExplanation();
+    }
+  }, [file, targetColumn]);
+
+  const maxImportance = explainData?.feature_importance?.[0]?.importance || 1;
+  const maxContrib = explainData?.patient_explanation?.contributions?.[0]
+    ? Math.max(...explainData.patient_explanation.contributions.map((c) => Math.abs(c.contribution)))
+    : 1;
+
+  const pe = explainData?.patient_explanation;
+
+  const handlePatientSelect = (e) => {
+    const pIdx = parseInt(e.target.value);
+    setSelectedPatientIdx(pIdx);
+    fetchExplanation(pIdx);
+  };
+
   return (
     <section className="screen active">
       <div className="screen-header">
@@ -20,546 +81,130 @@ export default function Step6({ onNext, onPrev }) {
         </div>
       </div>
 
-      <div className="cols">
-        {/* SOL KOLON */}
-        <div>
-          <div className="card">
-            <div className="card-title">
-              Most Important Patient Measurements (Overall)
-            </div>
-            <div className="bars" style={{ display: "grid", gap: "12px" }}>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "120px",
-                    fontSize: "12px",
-                    color: "var(--mid)",
-                    textAlign: "right",
-                  }}
-                >
-                  Ejection Fraction
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "82%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--navy)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                >
-                  0.28
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "120px",
-                    fontSize: "12px",
-                    color: "var(--mid)",
-                    textAlign: "right",
-                  }}
-                >
-                  Serum Creatinine
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "66%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--navy)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                >
-                  0.22
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "120px",
-                    fontSize: "12px",
-                    color: "var(--mid)",
-                    textAlign: "right",
-                  }}
-                >
-                  Age
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "54%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--navy)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                >
-                  0.17
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "120px",
-                    fontSize: "12px",
-                    color: "var(--mid)",
-                    textAlign: "right",
-                  }}
-                >
-                  Time in Hospital
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "40%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--navy)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                >
-                  0.13
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "120px",
-                    fontSize: "12px",
-                    color: "var(--mid)",
-                    textAlign: "right",
-                  }}
-                >
-                  Serum Sodium
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "28%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--navy)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                >
-                  0.09
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "120px",
-                    fontSize: "12px",
-                    color: "var(--mid)",
-                    textAlign: "right",
-                  }}
-                >
-                  Smoking Status
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "16%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--navy)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                >
-                  0.05
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="banner info"
-              style={{
-                marginTop: "15px",
-                background: "#eff6ff",
-                borderColor: "#bfdbfe",
-              }}
-            >
-              <div className="banner-icon">💡</div>
-              <div style={{ color: "#1e40af" }}>
-                <b>Clinical sense check:</b> Ejection fraction (how well the
-                heart pumps) and creatinine (kidney function) are the top
-                predictors. This makes strong clinical sense — both are
-                established readmission risk factors in heart failure.
-              </div>
-            </div>
-          </div>
-
-          <div className="card">
-            <div className="card-title">Single Patient Explanation</div>
-            <label className="lbl">Select a Test Patient</label>
-            <select className="sel">
-              <option>
-                Patient #47 · Age 71 · Ejection Fraction 20% · Pr...
-              </option>
-            </select>
-            <button
-              className="btn teal"
-              style={{ width: "100%", marginTop: "12px" }}
-            >
-              Explain This Patient →
-            </button>
-          </div>
+      {loading && (
+        <div className="card" style={{ textAlign: "center", padding: "40px", color: "var(--mid)" }}>
+          ⏳ Analysing feature importance... This may take a moment.
         </div>
+      )}
 
-        {/* SAĞ KOLON */}
-        <div>
-          <div className="card">
-            <div className="card-title">
-              Why Was Patient #47 Flagged as HIGH RISK? (78% probability)
-            </div>
-            <div
-              style={{
-                fontSize: "12px",
-                color: "var(--mid)",
-                marginBottom: "20px",
-              }}
-            >
-              Each bar shows how much a measurement pushed the prediction toward
-              or away from readmission. The longer the bar, the stronger the
-              effect.
-            </div>
+      {error && (
+        <div className="banner bad" style={{ marginBottom: "15px" }}>
+          <div className="banner-icon">❌</div>
+          <div>{error}</div>
+        </div>
+      )}
 
-            <div className="bars" style={{ display: "grid", gap: "12px" }}>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "130px",
-                    fontSize: "12px",
-                    color: "var(--bad)",
-                    textAlign: "right",
-                    fontWeight: 500,
-                  }}
-                >
-                  ↑ EF very low (20%)
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "85%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--bad)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{
-                    width: "40px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--bad)",
-                  }}
-                >
-                  +0.24
-                </div>
+      {!loading && !error && !explainData && (
+        <div className="card" style={{ textAlign: "center", padding: "40px" }}>
+          <h3 style={{ color: "var(--navy)", marginBottom: "10px" }}>No Explanation Data</h3>
+          <p style={{ color: "var(--mid)" }}>Upload a dataset and select a target column, then come back here.</p>
+          <button className="btn primary" style={{ marginTop: "15px" }} onClick={() => fetchExplanation(null)}>
+            🔍 Generate Explanation
+          </button>
+        </div>
+      )}
+
+      {explainData && (
+        <div className="cols">
+          {/* LEFT COLUMN */}
+          <div>
+            <div className="card">
+              <div className="card-title">Most Important Patient Measurements (Overall)</div>
+              <div className="bars" style={{ display: "grid", gap: "12px" }}>
+                {explainData.feature_importance.map((item, i) => (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                    <div style={{ width: "130px", fontSize: "12px", color: "var(--mid)", textAlign: "right", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={item.feature}>
+                      {item.feature}
+                    </div>
+                    <div style={{ flex: 1, height: "10px", borderRadius: "999px", background: "var(--line)" }}>
+                      <div style={{ width: `${(item.importance / maxImportance) * 100}%`, height: "100%", borderRadius: "999px", background: "var(--navy)", transition: "width 0.4s ease" }}></div>
+                    </div>
+                    <div style={{ width: "40px", fontSize: "12px", fontWeight: 600 }}>
+                      {item.importance}
+                    </div>
+                  </div>
+                ))}
               </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "130px",
-                    fontSize: "12px",
-                    color: "var(--bad)",
-                    textAlign: "right",
-                    fontWeight: 500,
-                  }}
-                >
-                  ↑ Age 71
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "60%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--bad)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{
-                    width: "40px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--bad)",
-                  }}
-                >
-                  +0.16
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "130px",
-                    fontSize: "12px",
-                    color: "var(--bad)",
-                    textAlign: "right",
-                    fontWeight: 500,
-                  }}
-                >
-                  ↑ Creatinine 2.1
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "45%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--bad)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{
-                    width: "40px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--bad)",
-                  }}
-                >
-                  +0.12
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "130px",
-                    fontSize: "12px",
-                    color: "var(--good)",
-                    textAlign: "right",
-                    fontWeight: 500,
-                  }}
-                >
-                  ↓ Non-smoker
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "20%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--teal)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{
-                    width: "40px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--good)",
-                  }}
-                >
-                  -0.05
-                </div>
-              </div>
-              <div
-                style={{ display: "flex", alignItems: "center", gap: "10px" }}
-              >
-                <div
-                  style={{
-                    width: "130px",
-                    fontSize: "12px",
-                    color: "var(--good)",
-                    textAlign: "right",
-                    fontWeight: 500,
-                  }}
-                >
-                  ↓ Sodium normal
-                </div>
-                <div
-                  style={{
-                    flex: 1,
-                    height: "10px",
-                    borderRadius: "999px",
-                    background: "var(--line)",
-                  }}
-                >
-                  <div
-                    style={{
-                      width: "15%",
-                      height: "100%",
-                      borderRadius: "999px",
-                      background: "var(--teal)",
-                    }}
-                  ></div>
-                </div>
-                <div
-                  style={{
-                    width: "40px",
-                    fontSize: "12px",
-                    fontWeight: 600,
-                    color: "var(--good)",
-                  }}
-                >
-                  -0.03
+
+              <div className="banner info" style={{ marginTop: "15px", background: "#eff6ff", borderColor: "#bfdbfe" }}>
+                <div className="banner-icon">💡</div>
+                <div style={{ color: "#1e40af" }}>
+                  <b>Clinical sense check for {selectedDomain}:</b> Does this feature ranking match clinical reality? 
+                  If an irrelevant variable shows high importance, the model might be learning a bias or correlation rather than medical causality.
                 </div>
               </div>
             </div>
+          </div>
 
-            <div
-              className="banner warn"
-              style={{
-                marginTop: "25px",
-                background: "#fffbeb",
-                borderColor: "#fde68a",
-              }}
-            >
-              <div className="banner-icon">⚠️</div>
-              <div style={{ color: "#92400e" }}>
-                <b>Important:</b> These are associations, not causes. The model
-                says ejection fraction is important for this prediction — a
-                cardiologist must decide whether and how to act.
+          {/* RIGHT COLUMN */}
+          <div>
+            <div className="card">
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
+                <div className="card-title" style={{ margin: 0 }}>Patient Explanation Waterfall</div>
+                <select className="sel" value={selectedPatientIdx || ""} onChange={handlePatientSelect} style={{ width: "200px" }}>
+                  <option value="" disabled>Select Test Patient</option>
+                  {explainData.test_patients.map((p) => (
+                    <option key={p.patient_index} value={p.patient_index}>{p.label}</option>
+                  ))}
+                </select>
               </div>
-            </div>
 
-            <div
-              className="banner info"
-              style={{
-                marginTop: "10px",
-                background: "#eff6ff",
-                borderColor: "#bfdbfe",
-              }}
-            >
-              <div className="banner-icon">💡</div>
-              <div style={{ color: "#1e40af" }}>
-                <b>What-if:</b> What if this patient's creatinine were 1.2
-                instead of 2.1? The predicted risk would drop to approximately
-                61%. This kind of thinking helps assess which interventions
-                might help.
+              <div style={{ fontSize: "14px", fontWeight: 600, color: "var(--navy)", marginBottom: "5px" }}>
+                Prediction for Patient #{pe?.patient_index}: {pe?.risk_percent}% Risk
+              </div>
+              <div style={{ fontSize: "12px", color: "var(--mid)", marginBottom: "20px" }}>
+                The bars below show how each measurement pushed this specific patient's risk higher (Red) or lower (Green).
+              </div>
+
+              <div className="bars" style={{ display: "grid", gap: "12px" }}>
+                {pe?.contributions.map((c, i) => {
+                  const isRisk = c.direction === "risk";
+                  const barColor = isRisk ? "var(--bad)" : "var(--good)";
+                  const textColor = isRisk ? "var(--bad)" : "var(--good)";
+                  const arrow = isRisk ? "↑" : "↓";
+                  const barWidth = `${Math.min((Math.abs(c.contribution) / maxContrib) * 100, 100)}%`;
+
+                  return (
+                    <div key={i} style={{ display: "flex", alignItems: "center", gap: "10px", cursor: "pointer", padding: "4px", borderRadius: "8px" }}
+                      onClick={() => setWhatIfFeature(c)}
+                      onMouseEnter={(e) => e.currentTarget.style.background = "#f1f5f9"}
+                      onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
+                    >
+                      <div style={{ width: "140px", fontSize: "12px", color: textColor, textAlign: "right", fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }} title={`${c.feature} = ${c.value}`}>
+                        {arrow} {c.feature} ({c.value})
+                      </div>
+                      <div style={{ flex: 1, height: "10px", borderRadius: "999px", background: "var(--line)" }}>
+                        <div style={{ width: barWidth, height: "100%", borderRadius: "999px", background: barColor, transition: "width 0.4s ease" }}></div>
+                      </div>
+                      <div style={{ width: "50px", fontSize: "12px", fontWeight: 600, color: textColor }}>
+                        {c.contribution > 0 ? "+" : ""}{c.contribution}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {whatIfFeature && (
+                <div className="banner info" style={{ marginTop: "20px", background: "#f0fdfa", borderColor: "#99f6e4" }}>
+                  <div className="banner-icon">🔄</div>
+                  <div style={{ color: "#115e59", fontSize: "13px" }}>
+                    <b>What-If Analysis:</b> If we improved Patient #{pe?.patient_index}'s <b>{whatIfFeature.feature}</b> towards a healthier value, their predicted risk could shift by approximately <b>{whatIfFeature.what_if_effect > 0 ? "+" : ""}{whatIfFeature.what_if_effect}</b>.
+                  </div>
+                </div>
+              )}
+
+              <div className="banner warn" style={{ marginTop: "20px", background: "#fffbeb", borderColor: "#fde68a" }}>
+                <div className="banner-icon">⚠️</div>
+                <div style={{ color: "#92400e" }}>
+                  <b>Important:</b> These are associations, not causes. The model says certain features are important for this prediction — a clinician must decide whether and how to act. <em>(Click on any feature above for a 'What-If' simulation).</em>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div
-        className="screen-footer"
-        style={{
-          marginTop: "15px",
-          padding: "15px",
-          background: "white",
-          borderRadius: "12px",
-          border: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="screen-footer">
         <button className="btn outline" onClick={onPrev}>
           ← Previous
         </button>

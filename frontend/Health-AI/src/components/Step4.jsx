@@ -18,11 +18,14 @@ export default function Step4({
 
   const canvasRef = useRef(null);
 
-  // FastAPI'ye model eğitimi için istek atan ana fonksiyon
+  const [trainError, setTrainError] = useState(null);
+
+  // FastAPI model training function
   const handleTrain = async (silent = false) => {
     if (!file || !targetColumn) return;
 
     if (!silent) setIsTraining(true);
+    setTrainError(null);
     const formData = new FormData();
     formData.append("file", file);
     formData.append("target_column", targetColumn);
@@ -44,20 +47,24 @@ export default function Step4({
           name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK})` : ""}`,
           ...data.metrics,
         });
+        setTrainError(null);
+      } else {
+        setTrainError(data.message);
       }
     } catch (err) {
-      console.error("Eğitim Hatası", err);
+      console.error("Training Error", err);
+      setTrainError("Failed to connect to the backend. Is FastAPI running?");
     } finally {
       if (!silent) setIsTraining(false);
     }
   };
 
-  // 🌟 AUTO-RETRAIN (Debounce): Kaydırıcı değiştiğinde 300ms bekleyip otomatik eğit
+  // AUTO-RETRAIN (Debounce): 600ms after slider change
   useEffect(() => {
     if (!autoRetrain || !file || !targetColumn) return;
     const timer = setTimeout(() => {
-      handleTrain(true); // Sessizce arka planda eğit
-    }, 300);
+      handleTrain(true);
+    }, 600);
     return () => clearTimeout(timer);
   }, [knnK, activeModel, autoRetrain]);
 
@@ -287,7 +294,7 @@ export default function Step4({
                 onClick={() => handleTrain(false)}
                 disabled={isTraining}
               >
-                {isTraining ? "⏳ Eğitiliyor..." : "⚡ Train Model"}
+                {isTraining ? "⏳ Training..." : "⚡ Train Model"}
               </button>
               <button
                 className="btn outline"
@@ -297,6 +304,15 @@ export default function Step4({
                 + Compare
               </button>
             </div>
+
+            {trainError && (
+              <div className="banner bad" style={{ marginTop: "12px", background: "#fef2f2", borderColor: "#fca5a5" }}>
+                <div className="banner-icon">❌</div>
+                <div style={{ color: "#991b1b", fontSize: "13px", lineHeight: 1.5 }}>
+                  <b>Training Failed:</b> {trainError}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 

@@ -8,17 +8,16 @@ export default function Step5({ onNext, onPrev, trainResults }) {
           className="card"
           style={{ padding: "50px", textAlign: "center", marginTop: "20px" }}
         >
-          <h3 style={{ color: "var(--navy)" }}>Henüz Bir Model Eğitilmedi</h3>
+          <h3 style={{ color: "var(--navy)" }}>No Model Trained Yet</h3>
           <p style={{ color: "var(--mid)", marginTop: "10px" }}>
-            Lütfen 4. Adıma dönüp bir algoritma seçin ve "Train Model" butonuna
-            basın.
+            Please go back to Step 4, select an algorithm, and click "Train Model".
           </p>
           <button
             className="btn primary"
             style={{ marginTop: "20px" }}
             onClick={onPrev}
           >
-            ← 4. Adıma Dön
+            ← Go to Step 4
           </button>
         </div>
       </section>

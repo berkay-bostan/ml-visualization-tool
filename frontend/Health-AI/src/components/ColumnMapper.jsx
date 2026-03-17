@@ -9,7 +9,6 @@ export default function ColumnMapper({
 }) {
   const [selectedTarget, setSelectedTarget] = useState("");
 
-  // Dışarıdan bir şey seçildiyse, modal açıldığında onu hatırla!
   useEffect(() => {
     if (currentTarget) {
       setSelectedTarget(currentTarget);
@@ -49,7 +48,7 @@ export default function ColumnMapper({
               value={selectedTarget}
               onChange={(e) => setSelectedTarget(e.target.value)}
             >
-              <option value="">-- Lütfen Hedef Sütunu Seçin --</option>
+              <option value="">-- Select Target Column --</option>
               {columns ? (
                 columns.map((col) => (
                   <option key={col} value={col}>
@@ -57,7 +56,7 @@ export default function ColumnMapper({
                   </option>
                 ))
               ) : (
-                <option disabled>Önce CSV Yükleyin</option>
+                <option disabled>Upload a CSV first</option>
               )}
             </select>
 

@@ -57,7 +57,7 @@ def get_clinical_domains():
 async def load_dataset(file: UploadFile = File(...)):
     if not file.filename.endswith(".csv"):
         raise HTTPException(
-            status_code=400, detail="Sadece CSV dosyaları yüklenebilir."
+            status_code=400, detail="Only CSV files can be uploaded."
         )
 
     try:
@@ -67,14 +67,14 @@ async def load_dataset(file: UploadFile = File(...)):
         if len(df) < 10:
             return {
                 "status": "error",
-                "message": "Veri seti en az 10 hasta içermelidir.",
+                "message": "Dataset must contain at least 10 patients.",
             }
 
         numeric_columns = df.select_dtypes(include=["number"]).columns
         if len(numeric_columns) < 1:
             return {
                 "status": "error",
-                "message": "En az bir sayısal ölçüm bulunmalıdır.",
+                "message": "At least one numeric measurement column is required.",
             }
 
         # JSON formatına uygun tipleri çeviriyoruz
@@ -118,7 +118,7 @@ async def preprocess_data(
         if len(numeric_cols) == 0:
             return {
                 "status": "error",
-                "message": "Veri setinizde hiç sayısal sütun yok.",
+                "message": "No numeric columns found in dataset.",
             }
 
         sample_col = numeric_cols[0]  # Gösterge için ilk sütunu seç
@@ -151,24 +151,25 @@ async def preprocess_data(
 
         return {
             "status": "success",
-            "train_patients": train_count,
-            "test_patients": test_count,
+            "train_patients": int(train_count),
+            "test_patients": int(test_count),
             "before": {
-                "min": round(before_min, 2),
-                "mean": round(before_mean, 2),
-                "max": round(before_max, 2),
+                "min": round(float(before_min), 2),
+                "mean": round(float(before_mean), 2),
+                "max": round(float(before_max), 2),
             },
             "after": {
-                "min": round(after_min, 2),
-                "mean": round(after_mean, 2),
-                "max": round(after_max, 2),
+                "min": round(float(after_min), 2),
+                "mean": round(float(after_mean), 2),
+                "max": round(float(after_max), 2),
             },
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
 
 
-# --- STEP 4 & 5: MODEL TRAINING (METİN KORUMALI) ---
+
+# --- STEP 4 & 5: MODEL TRAINING ---
 @app.post("/train")
 async def train_model(
     file: UploadFile = File(...),
@@ -180,13 +181,34 @@ async def train_model(
     try:
         df = pd.read_csv(file.file)
         if target_column not in df.columns:
-            return {"status": "error", "message": "Hedef sütun bulunamadı."}
+            return {"status": "error", "message": "Target column not found."}
 
         X = df.drop(columns=[target_column])
         y = df[target_column]
 
+        # Target column validation: too many unique values = likely continuous/regression
+        n_unique = y.nunique()
+        n_samples = len(y)
+        if n_unique > n_samples * 0.5:
+            return {
+                "status": "error",
+                "message": f"Target column '{target_column}' has {n_unique} unique values out of {n_samples} samples. "
+                           f"This looks like a continuous variable, not a classification target. "
+                           f"Please select a column with fewer categories (e.g., 0/1, Yes/No).",
+            }
+
+        if n_unique < 2:
+            return {
+                "status": "error",
+                "message": f"Target column '{target_column}' has only {n_unique} unique value(s). "
+                           f"Classification requires at least 2 distinct classes.",
+            }
+
         numeric_cols = X.select_dtypes(include=["number"]).columns
         X_numeric = X[numeric_cols].copy()
+
+        if len(X_numeric.columns) == 0:
+            return {"status": "error", "message": "No numeric feature columns found for training."}
 
         imputer = SimpleImputer(strategy="median")
         X_imputed = imputer.fit_transform(X_numeric)
@@ -194,7 +216,6 @@ async def train_model(
         scaler = StandardScaler()
         X_scaled = scaler.fit_transform(X_imputed)
 
-        # YENİ: METİN KORUMASI (GENDER, YES/NO GİBİ METİNLERİ 1 VE 0'A ÇEVİRİR)
         le = LabelEncoder()
         y_encoded = le.fit_transform(y)
 
@@ -203,7 +224,8 @@ async def train_model(
         )
 
         if algorithm == "knn":
-            model = KNeighborsClassifier(n_neighbors=knn_k)
+            k = min(knn_k, max(1, len(X_train) - 1))
+            model = KNeighborsClassifier(n_neighbors=k)
         elif algorithm == "svm":
             model = SVC(probability=True, random_state=42)
         elif algorithm == "dt":
@@ -211,11 +233,11 @@ async def train_model(
         elif algorithm == "rf":
             model = RandomForestClassifier(random_state=42)
         elif algorithm == "lr":
-            model = LogisticRegression(random_state=42)
+            model = LogisticRegression(random_state=42, max_iter=1000)
         elif algorithm == "nb":
             model = GaussianNB()
         else:
-            return {"status": "error", "message": "Geçersiz model."}
+            return {"status": "error", "message": "Invalid model type."}
 
         model.fit(X_train, y_train)
         y_pred = model.predict(X_test)
@@ -266,3 +288,111 @@ async def train_model(
 
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+# --- STEP 6: EXPLAINABILITY ---
+@app.post("/explain")
+async def explain_model(
+    file: UploadFile = File(...),
+    target_column: str = Form(...),
+    test_size: float = Form(0.2),
+    patient_index: int = Form(None),
+):
+    try:
+        df = pd.read_csv(file.file)
+        if target_column not in df.columns:
+            return {"status": "error", "message": "Target column not found."}
+
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
+
+        numeric_cols = X.select_dtypes(include=["number"]).columns.tolist()
+        X_numeric = X[numeric_cols].copy()
+
+        if len(X_numeric.columns) == 0:
+            return {"status": "error", "message": "No numeric features found."}
+
+        imputer = SimpleImputer(strategy="median")
+        X_imputed = pd.DataFrame(imputer.fit_transform(X_numeric), columns=numeric_cols)
+
+        scaler = StandardScaler()
+        X_scaled = pd.DataFrame(scaler.fit_transform(X_imputed), columns=numeric_cols)
+
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(y)
+
+        X_train, X_test, y_train, y_test = train_test_split(
+            X_scaled, y_encoded, test_size=test_size, random_state=42
+        )
+
+        rf = RandomForestClassifier(n_estimators=100, random_state=42)
+        rf.fit(X_train, y_train)
+
+        importances = rf.feature_importances_
+        feature_importance = []
+        for col, imp in sorted(zip(numeric_cols, importances), key=lambda x: -x[1]):
+            feature_importance.append({"feature": col, "importance": round(float(imp), 4)})
+
+        y_prob_all = rf.predict_proba(X_test)
+        if y_prob_all.shape[1] >= 2:
+            risk_scores = y_prob_all[:, 1]
+        else:
+            risk_scores = y_prob_all[:, 0]
+
+        # Use explicitly provided patient_index, else use the highest risk patient
+        if patient_index is not None and patient_index in X_test.index:
+            target_idx = patient_index
+            iloc_idx = list(X_test.index).index(target_idx)
+        else:
+            iloc_idx = int(risk_scores.argmax())
+            target_idx = X_test.index[iloc_idx]
+            
+        patient_data = X_test.iloc[iloc_idx]
+        patient_risk = round(float(risk_scores[iloc_idx]) * 100)
+
+        patient_contributions = []
+        for col, imp in zip(numeric_cols, importances):
+            val = float(patient_data[col])
+            mean_val = float(X_train[col].mean())
+            deviation = val - mean_val
+            contribution = round(float(deviation * imp), 4)
+            original_val = float(X_imputed.iloc[iloc_idx][col])
+            
+            # Simulated partial dependency for "what-if"
+            what_if_effect = round(contribution * -0.5, 4)
+            
+            patient_contributions.append({
+                "feature": col,
+                "value": round(original_val, 2),
+                "contribution": contribution,
+                "direction": "risk" if contribution > 0 else "protective",
+                "what_if_effect": what_if_effect
+            })
+
+        patient_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
+
+        # Multi-patient list for dropdown (top 15)
+        test_patients = []
+        for i in range(min(15, len(X_test))):
+            risk = round(float(risk_scores[i]) * 100)
+            idx = int(X_test.index[i])
+            test_patients.append({
+                "patient_index": idx,
+                "label": f"Patient #{idx} (Risk: {risk}%)",
+                "risk": risk,
+            })
+
+        return {
+            "status": "success",
+            "feature_importance": feature_importance[:10],
+            "patient_explanation": {
+                "patient_index": int(target_idx),
+                "risk_percent": patient_risk,
+                "contributions": patient_contributions[:6],
+            },
+            "test_patients": test_patients,
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+

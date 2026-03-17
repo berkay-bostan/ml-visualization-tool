@@ -39,6 +39,41 @@ export default function Step2({
     }
   };
 
+  // Gerçek missing data yüzdesini hesapla
+  const getMissingPercent = () => {
+    if (!datasetInfo?.columns_info?.missing_data_count) return "0.0";
+    const missing = datasetInfo.columns_info.missing_data_count;
+    const totalCells =
+      datasetInfo.dataset_summary.total_patients *
+      datasetInfo.dataset_summary.total_measurements;
+    const totalMissing = Object.values(missing).reduce((a, b) => a + b, 0);
+    return totalCells > 0 ? ((totalMissing / totalCells) * 100).toFixed(1) : "0.0";
+  };
+
+  // Her sütunun missing yüzdesini döndür
+  const getColumnMissing = (col) => {
+    if (!datasetInfo?.columns_info?.missing_data_count) return "0%";
+    const count = datasetInfo.columns_info.missing_data_count[col] || 0;
+    const total = datasetInfo.dataset_summary.total_patients;
+    return total > 0 ? `${((count / total) * 100).toFixed(1)}%` : "0%";
+  };
+
+  // Sütunun eksik verisi var mı?
+  const hasColumnMissing = (col) => {
+    if (!datasetInfo?.columns_info?.missing_data_count) return false;
+    return (datasetInfo.columns_info.missing_data_count[col] || 0) > 0;
+  };
+
+  // Veri tipini göster
+  const getColumnType = (col) => {
+    if (col === targetColumn) return "Target Label";
+    if (!datasetInfo?.columns_info?.data_types) return "Feature";
+    const dtype = datasetInfo.columns_info.data_types[col] || "";
+    if (dtype.includes("int") || dtype.includes("float")) return "Numeric";
+    if (dtype.includes("object")) return "Categorical";
+    return "Feature";
+  };
+
   return (
     <section className="screen active">
       <div className="screen-header">
@@ -64,7 +99,6 @@ export default function Step2({
           <div className="card">
             <div className="card-title">Data Source</div>
 
-            {/* HOCANIN İSTEDİĞİ BUTONLAR */}
             <div style={{ display: "flex", gap: "8px", marginBottom: "15px" }}>
               <button
                 className="btn outline"
@@ -123,7 +157,7 @@ export default function Step2({
                     setTargetColumn("");
                   }}
                 >
-                  Değiştir
+                  Change
                 </button>
               </div>
             ) : (
@@ -147,7 +181,7 @@ export default function Step2({
               onClick={handleFileUpload}
               disabled={loading || !file}
             >
-              {loading ? "Analiz Ediliyor..." : "Veriyi Yükle ve Analiz Et"}
+              {loading ? "Analysing..." : "Upload & Analyse Data"}
             </button>
 
             {error && (
@@ -164,7 +198,7 @@ export default function Step2({
               value={targetColumn}
               onChange={(e) => setTargetColumn(e.target.value)}
             >
-              <option value="">-- Lütfen Hedef Sütunu Seçin --</option>
+              <option value="">-- Select Target Column --</option>
               {datasetInfo?.columns?.map((col) => (
                 <option key={col} value={col}>
                   {col}
@@ -181,7 +215,6 @@ export default function Step2({
               This is the outcome the model will learn to predict.
             </div>
 
-            {/* HOCANIN İSTEDİĞİ LACİVERT BUTON */}
             <button
               className="btn primary"
               style={{
@@ -195,7 +228,6 @@ export default function Step2({
               🗂 Open Column Mapper & Validate
             </button>
 
-            {/* HOCANIN İSTEDİĞİ KIRMIZI BANNER */}
             {!targetColumn && datasetInfo && (
               <div
                 className="banner bad"
@@ -216,23 +248,29 @@ export default function Step2({
                 </div>
               </div>
             )}
+
+            {targetColumn && (
+              <div
+                className="banner good"
+                style={{
+                  marginTop: "15px",
+                  background: "#ecfdf5",
+                  borderColor: "#86d4a7",
+                }}
+              >
+                <div className="banner-icon">✅</div>
+                <div style={{ color: "#166534" }}>
+                  <b>Target column set:</b> <code>{targetColumn}</code> — You
+                  may now proceed to Step 3.
+                </div>
+              </div>
+            )}
           </div>
 
           {datasetInfo && (
             <div className="card">
-              <div
-                className="card-title"
-                style={{
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  color: "var(--muted)",
-                }}
-              >
-                Dataset Summary
-              </div>
+              <div className="card-title">Dataset Summary</div>
 
-              {/* HOCANIN İSTEDİĞİ 3'LÜ KPI TASARIMI */}
               <div className="kpis" style={{ display: "flex", gap: "10px" }}>
                 <div
                   className="kpi"
@@ -301,8 +339,8 @@ export default function Step2({
                   style={{
                     flex: 1,
                     textAlign: "center",
-                    border: "1px solid #fde68a",
-                    background: "#fffbeb",
+                    border: `1px solid ${parseFloat(getMissingPercent()) > 0 ? "#fde68a" : "rgba(13,122,80,.2)"}`,
+                    background: parseFloat(getMissingPercent()) > 0 ? "#fffbeb" : "var(--good-bg)",
                     padding: "15px 5px",
                     borderRadius: "10px",
                   }}
@@ -311,15 +349,15 @@ export default function Step2({
                     style={{
                       fontSize: "28px",
                       fontWeight: "bold",
-                      color: "#b45309",
+                      color: parseFloat(getMissingPercent()) > 0 ? "#b45309" : "var(--good)",
                     }}
                   >
-                    6.8%
+                    {getMissingPercent()}%
                   </div>
                   <div
                     style={{
                       fontSize: "10px",
-                      color: "#b45309",
+                      color: parseFloat(getMissingPercent()) > 0 ? "#b45309" : "var(--good)",
                       textTransform: "uppercase",
                       marginTop: "5px",
                       letterSpacing: "0.5px",
@@ -337,128 +375,10 @@ export default function Step2({
         <div>
           {datasetInfo ? (
             <div className="card">
-              <div
-                className="card-title"
-                style={{
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  color: "var(--muted)",
-                }}
-              >
-                Class Balance — How Many Readmitted vs. Not?
-              </div>
-
-              {/* HOCANIN İSTEDİĞİ İKİLİ BAR VE SARI UYARI */}
-              <div
-                className="bars"
-                style={{ display: "grid", gap: "12px", marginBottom: "20px" }}
-              >
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "10px" }}
-                >
-                  <div
-                    style={{
-                      width: "120px",
-                      fontSize: "12px",
-                      color: "var(--mid)",
-                      textAlign: "right",
-                    }}
-                  >
-                    Not Readmitted (0)
-                  </div>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "10px",
-                      borderRadius: "999px",
-                      background: "var(--line)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "67%",
-                        height: "100%",
-                        borderRadius: "999px",
-                        background: "var(--navy)",
-                      }}
-                    ></div>
-                  </div>
-                  <div
-                    style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                  >
-                    67%
-                  </div>
-                </div>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "10px" }}
-                >
-                  <div
-                    style={{
-                      width: "120px",
-                      fontSize: "12px",
-                      color: "var(--mid)",
-                      textAlign: "right",
-                    }}
-                  >
-                    Readmitted (1)
-                  </div>
-                  <div
-                    style={{
-                      flex: 1,
-                      height: "10px",
-                      borderRadius: "999px",
-                      background: "var(--line)",
-                    }}
-                  >
-                    <div
-                      style={{
-                        width: "33%",
-                        height: "100%",
-                        borderRadius: "999px",
-                        background: "var(--teal)",
-                      }}
-                    ></div>
-                  </div>
-                  <div
-                    style={{ width: "30px", fontSize: "12px", fontWeight: 600 }}
-                  >
-                    33%
-                  </div>
-                </div>
-              </div>
-
-              <div
-                className="banner warn"
-                style={{
-                  marginBottom: "25px",
-                  background: "#fffbeb",
-                  borderColor: "#fde68a",
-                  color: "#92400e",
-                }}
-              >
-                <div className="banner-icon">⚠️</div>
-                <div style={{ fontSize: "13px", lineHeight: 1.5 }}>
-                  <b>Imbalance detected:</b> Only 33% of patients were
-                  readmitted. A lazy model could predict "not readmitted" for
-                  everyone and be 67% accurate — but miss all real cases. We
-                  will handle this in Step 3.
-                </div>
-              </div>
-
-              <div
-                className="card-title"
-                style={{
-                  fontSize: "11px",
-                  textTransform: "uppercase",
-                  letterSpacing: "1px",
-                  color: "var(--muted)",
-                }}
-              >
+              <div className="card-title">
                 Patient Measurements (Features)
               </div>
 
-              {/* HOCANIN İSTEDİĞİ 4 SÜTUNLU TABLO TASARIMI */}
               <div
                 className="tbl-wrap"
                 style={{
@@ -491,7 +411,6 @@ export default function Step2({
                     </tr>
                   </thead>
                   <tbody>
-                    {/* Gerçek veriler listeleniyor */}
                     {datasetInfo.columns.map((col, i) => (
                       <tr
                         key={i}
@@ -512,28 +431,49 @@ export default function Step2({
                         <td
                           style={{ padding: "12px 15px", color: "var(--mid)" }}
                         >
-                          {col === targetColumn ? "Target Label" : "Feature"}
+                          {getColumnType(col)}
                         </td>
                         <td
-                          style={{ padding: "12px 15px", color: "var(--mid)" }}
+                          style={{
+                            padding: "12px 15px",
+                            color: hasColumnMissing(col) ? "var(--warn)" : "var(--mid)",
+                            fontWeight: hasColumnMissing(col) ? 600 : 400,
+                          }}
                         >
-                          0%
+                          {getColumnMissing(col)}
                         </td>
                         <td style={{ padding: "12px 15px" }}>
-                          <span
-                            className="tag good"
-                            style={{
-                              background: "#ecfdf5",
-                              color: "#059669",
-                              padding: "4px 10px",
-                              borderRadius: "6px",
-                              fontSize: "11px",
-                              fontWeight: 600,
-                              border: "1px solid #a7f3d0",
-                            }}
-                          >
-                            Ready
-                          </span>
+                          {hasColumnMissing(col) ? (
+                            <span
+                              className="tag warn"
+                              style={{
+                                background: "#fffbeb",
+                                color: "#92400e",
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                border: "1px solid #fde68a",
+                              }}
+                            >
+                              Needs Imputation
+                            </span>
+                          ) : (
+                            <span
+                              className="tag good"
+                              style={{
+                                background: "#ecfdf5",
+                                color: "#059669",
+                                padding: "4px 10px",
+                                borderRadius: "6px",
+                                fontSize: "11px",
+                                fontWeight: 600,
+                                border: "1px solid #a7f3d0",
+                              }}
+                            >
+                              Ready
+                            </span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -547,8 +487,8 @@ export default function Step2({
               <div className="banner info">
                 <div className="banner-icon">ℹ️</div>
                 <div>
-                  Sol taraftan CSV dosyanızı yüklediğinizde, verilerinizin sütun
-                  detayları ve içerik tablosu burada görünecektir.
+                  Upload a CSV file on the left to see column details and the
+                  data schema table here.
                 </div>
               </div>
             </div>
@@ -556,20 +496,8 @@ export default function Step2({
         </div>
       </div>
 
-      {/* HOCANIN İSTEDİĞİ FOOTER TASARIMI */}
-      <div
-        className="screen-footer"
-        style={{
-          marginTop: "15px",
-          padding: "15px 20px",
-          background: "white",
-          borderRadius: "12px",
-          border: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
+      {/* FOOTER */}
+      <div className="screen-footer">
         <div
           style={{
             fontSize: "11px",

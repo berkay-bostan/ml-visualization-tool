@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function Navbar({ selectedDomain }) {
+export default function Navbar({ selectedDomain, onReset }) {
   return (
     <nav className="nav">
       <div className="nav-brand">
@@ -17,10 +17,11 @@ export default function Navbar({ selectedDomain }) {
           <span className="nav-chip-dot"></span> Domain:{" "}
           <b style={{ color: "white", marginLeft: "4px" }}>
             {selectedDomain || "Loading..."}
-          </b>{" "}
-          ▾
+          </b>
         </div>
-        <button className="nav-btn">↺ Reset</button>
+        <button className="nav-btn" onClick={onReset}>
+          ↺ Reset
+        </button>
         <button
           className="nav-btn"
           style={{ background: "var(--teal)", borderColor: "var(--teal)" }}

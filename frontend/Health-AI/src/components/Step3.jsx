@@ -1,18 +1,17 @@
 import React, { useState } from "react";
 
-export default function Step3({ onNext, onPrev, file, targetColumn }) {
+export default function Step3({ onNext, onPrev, file, targetColumn, prepResult, setPrepResult }) {
   const [trainSplit, setTrainSplit] = useState(80);
   const [missingStrategy, setMissingStrategy] = useState("median");
   const [normalization, setNormalization] = useState("z-score");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [prepResult, setPrepResult] = useState(null); // Backendden gelen veriler burada tutulacak
 
   const handlePreprocess = async () => {
     if (!file || !targetColumn) {
       setError(
-        "Dosya veya hedef sütun eksik. Lütfen Step 2'ye dönüp kontrol edin.",
+        "File or target column is missing. Please go back to Step 2 and check.",
       );
       return;
     }
@@ -38,7 +37,7 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
         setError(data.message);
       }
     } catch (err) {
-      setError("İşlem başarısız oldu. Backend açık mı?");
+      setError("Processing failed. Is the backend running?");
     } finally {
       setLoading(false);
     }
@@ -98,9 +97,11 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                   fontWeight: 600,
                   borderRadius: "8px",
                   border: "1px solid var(--line2)",
+                  minWidth: "55px",
+                  textAlign: "center",
                 }}
               >
-                {trainSplit}%
+                {trainSplit}% / {100 - trainSplit}%
               </div>
             </div>
             <div
@@ -142,11 +143,13 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                 Z-score (recommended for most models)
               </option>
               <option value="min-max">Min-Max (0 to 1 scale)</option>
+              <option value="none">None — skip normalisation</option>
             </select>
 
             {error && (
               <div className="banner bad" style={{ marginTop: "10px" }}>
-                ❌ {error}
+                <div className="banner-icon">❌</div>
+                <div>{error}</div>
               </div>
             )}
 
@@ -157,7 +160,7 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
               disabled={loading}
             >
               {loading
-                ? "⏳ Veriler İşleniyor..."
+                ? "⏳ Processing Data..."
                 : "✓ Apply Preparation Settings"}
             </button>
           </div>
@@ -185,138 +188,23 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                     className="bars"
                     style={{ display: "grid", gap: "10px" }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "60px",
-                          fontSize: "12px",
-                          color: "var(--mid)",
-                          textAlign: "right",
-                        }}
-                      >
-                        Min
+                    {[
+                      { label: "Min", value: prepResult.before.min, width: "14%", color: "var(--bad)" },
+                      { label: "Mean", value: prepResult.before.mean, width: "38%", color: "var(--navy)" },
+                      { label: "Max", value: prepResult.before.max, width: "80%", color: "var(--teal)" },
+                    ].map((item) => (
+                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ width: "60px", fontSize: "12px", color: "var(--mid)", textAlign: "right" }}>
+                          {item.label}
+                        </div>
+                        <div style={{ flex: 1, height: "10px", borderRadius: "999px", background: "var(--line)" }}>
+                          <div style={{ width: item.width, height: "100%", borderRadius: "999px", background: item.color, transition: "width 0.4s ease" }}></div>
+                        </div>
+                        <div style={{ width: "50px", fontSize: "12px", fontWeight: 600 }}>
+                          {item.value}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: "10px",
-                          borderRadius: "999px",
-                          background: "var(--line)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "14%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            background: "var(--bad)",
-                          }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          width: "30px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {prepResult.before.min}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "60px",
-                          fontSize: "12px",
-                          color: "var(--mid)",
-                          textAlign: "right",
-                        }}
-                      >
-                        Mean
-                      </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: "10px",
-                          borderRadius: "999px",
-                          background: "var(--line)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "38%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            background: "var(--navy)",
-                          }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          width: "30px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {prepResult.before.mean}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "60px",
-                          fontSize: "12px",
-                          color: "var(--mid)",
-                          textAlign: "right",
-                        }}
-                      >
-                        Max
-                      </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: "10px",
-                          borderRadius: "999px",
-                          background: "var(--line)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "80%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            background: "var(--teal)",
-                          }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          width: "30px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {prepResult.before.max}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
                 <div>
@@ -335,138 +223,23 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                     className="bars"
                     style={{ display: "grid", gap: "10px" }}
                   >
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "60px",
-                          fontSize: "12px",
-                          color: "var(--mid)",
-                          textAlign: "right",
-                        }}
-                      >
-                        Min
+                    {[
+                      { label: "Min", value: prepResult.after.min, width: "10%", color: "var(--bad)" },
+                      { label: "Mean", value: prepResult.after.mean, width: "50%", color: "var(--navy)" },
+                      { label: "Max", value: prepResult.after.max, width: "90%", color: "var(--teal)" },
+                    ].map((item) => (
+                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                        <div style={{ width: "60px", fontSize: "12px", color: "var(--mid)", textAlign: "right" }}>
+                          {item.label}
+                        </div>
+                        <div style={{ flex: 1, height: "10px", borderRadius: "999px", background: "var(--line)" }}>
+                          <div style={{ width: item.width, height: "100%", borderRadius: "999px", background: item.color, transition: "width 0.4s ease" }}></div>
+                        </div>
+                        <div style={{ width: "50px", fontSize: "12px", fontWeight: 600 }}>
+                          {item.value}
+                        </div>
                       </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: "10px",
-                          borderRadius: "999px",
-                          background: "var(--line)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "10%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            background: "var(--bad)",
-                          }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          width: "40px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {prepResult.after.min}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "60px",
-                          fontSize: "12px",
-                          color: "var(--mid)",
-                          textAlign: "right",
-                        }}
-                      >
-                        Mean
-                      </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: "10px",
-                          borderRadius: "999px",
-                          background: "var(--line)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "50%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            background: "var(--navy)",
-                          }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          width: "40px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {prepResult.after.mean}
-                      </div>
-                    </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "10px",
-                      }}
-                    >
-                      <div
-                        style={{
-                          width: "60px",
-                          fontSize: "12px",
-                          color: "var(--mid)",
-                          textAlign: "right",
-                        }}
-                      >
-                        Max
-                      </div>
-                      <div
-                        style={{
-                          flex: 1,
-                          height: "10px",
-                          borderRadius: "999px",
-                          background: "var(--line)",
-                        }}
-                      >
-                        <div
-                          style={{
-                            width: "90%",
-                            height: "100%",
-                            borderRadius: "999px",
-                            background: "var(--teal)",
-                          }}
-                        ></div>
-                      </div>
-                      <div
-                        style={{
-                          width: "40px",
-                          fontSize: "12px",
-                          fontWeight: 600,
-                        }}
-                      >
-                        {prepResult.after.max}
-                      </div>
-                    </div>
+                    ))}
                   </div>
                 </div>
               </div>
@@ -478,7 +251,7 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
                   color: "var(--muted)",
                 }}
               >
-                Lütfen soldaki ayarları uygulayarak verilerinizi analiz edin.
+                Apply the settings on the left to see your data analysis results.
               </div>
             )}
 
@@ -496,18 +269,7 @@ export default function Step3({ onNext, onPrev, file, targetColumn }) {
         </div>
       </div>
 
-      <div
-        className="screen-footer"
-        style={{
-          marginTop: "15px",
-          padding: "15px",
-          background: "white",
-          borderRadius: "12px",
-          border: "1px solid var(--line)",
-          display: "flex",
-          justifyContent: "space-between",
-        }}
-      >
+      <div className="screen-footer">
         <button className="btn outline" onClick={onPrev}>
           ← Previous
         </button>

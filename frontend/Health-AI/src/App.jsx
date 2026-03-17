@@ -9,81 +9,107 @@ import Step4 from "./components/Step4";
 import Step5 from "./components/Step5";
 import Step6 from "./components/Step6";
 import Step7 from "./components/Step7";
-import NavigationModal from "./components/NavigationModal"; // YENİ: Modalı import et
+import NavigationModal from "./components/NavigationModal";
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1);
   const [selectedDomain, setSelectedDomain] = useState("Cardiology");
+
+  // project.md'deki 20 uzmanlık alanı
   const domains = [
     "Cardiology",
+    "Radiology",
     "Nephrology",
-    "Oncology",
-    "Neurology",
-    "Diabetes",
-    "Pulmonology",
-    "Sepsis / ICU",
-    "Fetal Health",
+    "Oncology — Breast",
+    "Neurology — Parkinson's",
+    "Endocrinology — Diabetes",
+    "Hepatology — Liver",
+    "Cardiology — Stroke",
+    "Mental Health",
+    "Pulmonology — COPD",
+    "Haematology — Anaemia",
     "Dermatology",
-    "Stroke Risk",
+    "Ophthalmology",
+    "Orthopaedics — Spine",
+    "ICU / Sepsis",
+    "Obstetrics — Fetal Health",
+    "Cardiology — Arrhythmia",
+    "Oncology — Cervical",
+    "Thyroid / Endocrinology",
+    "Pharmacy — Readmission",
   ];
 
   const [file, setFile] = useState(null);
   const [datasetInfo, setDatasetInfo] = useState(null);
   const [targetColumn, setTargetColumn] = useState("");
   const [trainResults, setTrainResults] = useState(null);
+  const [prepResult, setPrepResult] = useState(null);
 
-  // YENİ: Navigasyon Modalı'nın açık/kapalı durumunu tutan state
+  // Navigasyon Modalı
   const [isNavModalOpen, setIsNavModalOpen] = useState(false);
 
-  // 🛡️ GATEKEEPER FONKSİYONU (GÜNCELLENDİ)
+  // 🔄 RESET — Tüm uygulamayı sıfırla
+  const handleReset = () => {
+    setCurrentStep(1);
+    setFile(null);
+    setDatasetInfo(null);
+    setTargetColumn("");
+    setTrainResults(null);
+    setPrepResult(null);
+  };
+
+  // Alan değiştirildiğinde tüm pipeline sıfırlansın (project.md'ye göre)
+  const handleDomainChange = (domain) => {
+    if (domain === selectedDomain) return;
+    if (currentStep > 1 || file || datasetInfo) {
+      const confirmed = window.confirm(
+        "Switching specialty resets the pipeline. All your current progress will be reset and you will return to Step 1. Continue?"
+      );
+      if (!confirmed) return;
+    }
+    setSelectedDomain(domain);
+    handleReset();
+  };
+
+  // 🛡️ GATEKEEPER
   const handleStepChange = (newStep) => {
-    // 1. KURAL: Kullanıcı geriye gitmek istiyorsa her zaman izin ver
     if (newStep < currentStep) {
       setCurrentStep(newStep);
       return;
     }
-
-    // 2. KURAL: (SENİN İSTEDİĞİN ZORUNLULUK - MODAL İLE)
-    // Eğer kullanıcı 3. veya daha ileri bir adıma geçmeye çalışıyorsa ve Hedef Sütun yoksa:
     if (newStep >= 3 && !targetColumn) {
-      // alert'i sildik, yerine modalı açıyoruz!
       setIsNavModalOpen(true);
-      setCurrentStep(2); // Zorla Step 2'ye geri at
+      setCurrentStep(2);
       return;
     }
-
-    // Eğer tüm kurallardan başarıyla geçerse adımı değiştir
     setCurrentStep(newStep);
   };
 
-  // Modalı kapatan fonksiyon
-  const closeNavModal = () => {
-    setIsNavModalOpen(false);
-  };
-
-  // Modaldaki "Go to Step 2" butonuna basınca Step 2'ye zorla götüren fonksiyon
+  const closeNavModal = () => setIsNavModalOpen(false);
   const goToStep2 = () => {
-    setIsNavModalOpen(false); // Önce modalı kapat
-    setCurrentStep(2); // Sonra zorla Step 2'ye at
+    setIsNavModalOpen(false);
+    setCurrentStep(2);
   };
 
   return (
     <>
-      <Navbar selectedDomain={selectedDomain} />
+      <Navbar
+        selectedDomain={selectedDomain}
+        onReset={handleReset}
+      />
       <div className="wrap">
         <div className="domain-bar">
           {domains.map((d) => (
             <div
               key={d}
               className={`domain-pill ${selectedDomain === d ? "active" : ""}`}
-              onClick={() => setSelectedDomain(d)}
+              onClick={() => handleDomainChange(d)}
             >
               {d}
             </div>
           ))}
         </div>
 
-        {/* Stepper'a Gatekeeper'ı veriyoruz */}
         <Stepper currentStep={currentStep} setCurrentStep={handleStepChange} />
 
         {currentStep === 1 && (
@@ -110,6 +136,8 @@ function App() {
             onPrev={() => handleStepChange(2)}
             file={file}
             targetColumn={targetColumn}
+            prepResult={prepResult}
+            setPrepResult={setPrepResult}
           />
         )}
         {currentStep === 4 && (
@@ -132,12 +160,19 @@ function App() {
           <Step6
             onNext={() => handleStepChange(7)}
             onPrev={() => handleStepChange(5)}
+            file={file}
+            targetColumn={targetColumn}
+            selectedDomain={selectedDomain}
           />
         )}
-        {currentStep === 7 && <Step7 onPrev={() => handleStepChange(6)} />}
+        {currentStep === 7 && (
+          <Step7
+            onPrev={() => handleStepChange(6)}
+            trainResults={trainResults}
+          />
+        )}
       </div>
 
-      {/* YENİ: Navigasyon Modalı'nı buraya ekliyoruz */}
       <NavigationModal
         isOpen={isNavModalOpen}
         onClose={closeNavModal}
