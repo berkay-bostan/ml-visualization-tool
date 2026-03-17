@@ -25,7 +25,7 @@ export default function Step2({
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/dataset/load", {
+      const response = await fetch("http://backend:8000/dataset/load", {
         method: "POST",
         body: formData,
       });
@@ -47,7 +47,9 @@ export default function Step2({
       datasetInfo.dataset_summary.total_patients *
       datasetInfo.dataset_summary.total_measurements;
     const totalMissing = Object.values(missing).reduce((a, b) => a + b, 0);
-    return totalCells > 0 ? ((totalMissing / totalCells) * 100).toFixed(1) : "0.0";
+    return totalCells > 0
+      ? ((totalMissing / totalCells) * 100).toFixed(1)
+      : "0.0";
   };
 
   // Her sütunun missing yüzdesini döndür
@@ -340,7 +342,10 @@ export default function Step2({
                     flex: 1,
                     textAlign: "center",
                     border: `1px solid ${parseFloat(getMissingPercent()) > 0 ? "#fde68a" : "rgba(13,122,80,.2)"}`,
-                    background: parseFloat(getMissingPercent()) > 0 ? "#fffbeb" : "var(--good-bg)",
+                    background:
+                      parseFloat(getMissingPercent()) > 0
+                        ? "#fffbeb"
+                        : "var(--good-bg)",
                     padding: "15px 5px",
                     borderRadius: "10px",
                   }}
@@ -349,7 +354,10 @@ export default function Step2({
                     style={{
                       fontSize: "28px",
                       fontWeight: "bold",
-                      color: parseFloat(getMissingPercent()) > 0 ? "#b45309" : "var(--good)",
+                      color:
+                        parseFloat(getMissingPercent()) > 0
+                          ? "#b45309"
+                          : "var(--good)",
                     }}
                   >
                     {getMissingPercent()}%
@@ -357,7 +365,10 @@ export default function Step2({
                   <div
                     style={{
                       fontSize: "10px",
-                      color: parseFloat(getMissingPercent()) > 0 ? "#b45309" : "var(--good)",
+                      color:
+                        parseFloat(getMissingPercent()) > 0
+                          ? "#b45309"
+                          : "var(--good)",
                       textTransform: "uppercase",
                       marginTop: "5px",
                       letterSpacing: "0.5px",
@@ -375,9 +386,7 @@ export default function Step2({
         <div>
           {datasetInfo ? (
             <div className="card">
-              <div className="card-title">
-                Patient Measurements (Features)
-              </div>
+              <div className="card-title">Patient Measurements (Features)</div>
 
               <div
                 className="tbl-wrap"
@@ -436,7 +445,9 @@ export default function Step2({
                         <td
                           style={{
                             padding: "12px 15px",
-                            color: hasColumnMissing(col) ? "var(--warn)" : "var(--mid)",
+                            color: hasColumnMissing(col)
+                              ? "var(--warn)"
+                              : "var(--mid)",
                             fontWeight: hasColumnMissing(col) ? 600 : 400,
                           }}
                         >

@@ -1,6 +1,13 @@
 import React, { useState } from "react";
 
-export default function Step3({ onNext, onPrev, file, targetColumn, prepResult, setPrepResult }) {
+export default function Step3({
+  onNext,
+  onPrev,
+  file,
+  targetColumn,
+  prepResult,
+  setPrepResult,
+}) {
   const [trainSplit, setTrainSplit] = useState(80);
   const [missingStrategy, setMissingStrategy] = useState("median");
   const [normalization, setNormalization] = useState("z-score");
@@ -26,7 +33,7 @@ export default function Step3({ onNext, onPrev, file, targetColumn, prepResult, 
     formData.append("normalization", normalization);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/preprocess", {
+      const response = await fetch("http://backend:8000/preprocess", {
         method: "POST",
         body: formData,
       });
@@ -189,18 +196,68 @@ export default function Step3({ onNext, onPrev, file, targetColumn, prepResult, 
                     style={{ display: "grid", gap: "10px" }}
                   >
                     {[
-                      { label: "Min", value: prepResult.before.min, width: "14%", color: "var(--bad)" },
-                      { label: "Mean", value: prepResult.before.mean, width: "38%", color: "var(--navy)" },
-                      { label: "Max", value: prepResult.before.max, width: "80%", color: "var(--teal)" },
+                      {
+                        label: "Min",
+                        value: prepResult.before.min,
+                        width: "14%",
+                        color: "var(--bad)",
+                      },
+                      {
+                        label: "Mean",
+                        value: prepResult.before.mean,
+                        width: "38%",
+                        color: "var(--navy)",
+                      },
+                      {
+                        label: "Max",
+                        value: prepResult.before.max,
+                        width: "80%",
+                        color: "var(--teal)",
+                      },
                     ].map((item) => (
-                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <div style={{ width: "60px", fontSize: "12px", color: "var(--mid)", textAlign: "right" }}>
+                      <div
+                        key={item.label}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "60px",
+                            fontSize: "12px",
+                            color: "var(--mid)",
+                            textAlign: "right",
+                          }}
+                        >
                           {item.label}
                         </div>
-                        <div style={{ flex: 1, height: "10px", borderRadius: "999px", background: "var(--line)" }}>
-                          <div style={{ width: item.width, height: "100%", borderRadius: "999px", background: item.color, transition: "width 0.4s ease" }}></div>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: "10px",
+                            borderRadius: "999px",
+                            background: "var(--line)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: item.width,
+                              height: "100%",
+                              borderRadius: "999px",
+                              background: item.color,
+                              transition: "width 0.4s ease",
+                            }}
+                          ></div>
                         </div>
-                        <div style={{ width: "50px", fontSize: "12px", fontWeight: 600 }}>
+                        <div
+                          style={{
+                            width: "50px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                          }}
+                        >
                           {item.value}
                         </div>
                       </div>
@@ -224,18 +281,68 @@ export default function Step3({ onNext, onPrev, file, targetColumn, prepResult, 
                     style={{ display: "grid", gap: "10px" }}
                   >
                     {[
-                      { label: "Min", value: prepResult.after.min, width: "10%", color: "var(--bad)" },
-                      { label: "Mean", value: prepResult.after.mean, width: "50%", color: "var(--navy)" },
-                      { label: "Max", value: prepResult.after.max, width: "90%", color: "var(--teal)" },
+                      {
+                        label: "Min",
+                        value: prepResult.after.min,
+                        width: "10%",
+                        color: "var(--bad)",
+                      },
+                      {
+                        label: "Mean",
+                        value: prepResult.after.mean,
+                        width: "50%",
+                        color: "var(--navy)",
+                      },
+                      {
+                        label: "Max",
+                        value: prepResult.after.max,
+                        width: "90%",
+                        color: "var(--teal)",
+                      },
                     ].map((item) => (
-                      <div key={item.label} style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                        <div style={{ width: "60px", fontSize: "12px", color: "var(--mid)", textAlign: "right" }}>
+                      <div
+                        key={item.label}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "10px",
+                        }}
+                      >
+                        <div
+                          style={{
+                            width: "60px",
+                            fontSize: "12px",
+                            color: "var(--mid)",
+                            textAlign: "right",
+                          }}
+                        >
                           {item.label}
                         </div>
-                        <div style={{ flex: 1, height: "10px", borderRadius: "999px", background: "var(--line)" }}>
-                          <div style={{ width: item.width, height: "100%", borderRadius: "999px", background: item.color, transition: "width 0.4s ease" }}></div>
+                        <div
+                          style={{
+                            flex: 1,
+                            height: "10px",
+                            borderRadius: "999px",
+                            background: "var(--line)",
+                          }}
+                        >
+                          <div
+                            style={{
+                              width: item.width,
+                              height: "100%",
+                              borderRadius: "999px",
+                              background: item.color,
+                              transition: "width 0.4s ease",
+                            }}
+                          ></div>
                         </div>
-                        <div style={{ width: "50px", fontSize: "12px", fontWeight: 600 }}>
+                        <div
+                          style={{
+                            width: "50px",
+                            fontSize: "12px",
+                            fontWeight: 600,
+                          }}
+                        >
                           {item.value}
                         </div>
                       </div>
@@ -251,7 +358,8 @@ export default function Step3({ onNext, onPrev, file, targetColumn, prepResult, 
                   color: "var(--muted)",
                 }}
               >
-                Apply the settings on the left to see your data analysis results.
+                Apply the settings on the left to see your data analysis
+                results.
               </div>
             )}
 

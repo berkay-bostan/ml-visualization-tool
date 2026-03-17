@@ -34,7 +34,7 @@ export default function Step4({
     formData.append("test_size", 0.2);
 
     try {
-      const response = await fetch("http://127.0.0.1:8000/train", {
+      const response = await fetch("http://backend:8000/train", {
         method: "POST",
         body: formData,
       });
@@ -306,9 +306,22 @@ export default function Step4({
             </div>
 
             {trainError && (
-              <div className="banner bad" style={{ marginTop: "12px", background: "#fef2f2", borderColor: "#fca5a5" }}>
+              <div
+                className="banner bad"
+                style={{
+                  marginTop: "12px",
+                  background: "#fef2f2",
+                  borderColor: "#fca5a5",
+                }}
+              >
                 <div className="banner-icon">❌</div>
-                <div style={{ color: "#991b1b", fontSize: "13px", lineHeight: 1.5 }}>
+                <div
+                  style={{
+                    color: "#991b1b",
+                    fontSize: "13px",
+                    lineHeight: 1.5,
+                  }}
+                >
                   <b>Training Failed:</b> {trainError}
                 </div>
               </div>
