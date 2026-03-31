@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: fastapi_app
+    ports:
+      - "8000:8000"
+    restart: always
+
+  frontend:
+    build: ./frontend/Health-AI
+    container_name: react_app
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    restart: always
