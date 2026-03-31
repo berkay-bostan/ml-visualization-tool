@@ -176,6 +176,7 @@ async def train_model(
     target_column: str = Form(...),
     algorithm: str = Form("knn"),
     knn_k: int = Form(5),
+    knn_distance: str = Form("euclidean"), 
     test_size: float = Form(0.2),
 ):
     try:
@@ -225,7 +226,7 @@ async def train_model(
 
         if algorithm == "knn":
             k = min(knn_k, max(1, len(X_train) - 1))
-            model = KNeighborsClassifier(n_neighbors=k)
+            model = KNeighborsClassifier(n_neighbors=k, metric=knn_distance)
         elif algorithm == "svm":
             model = SVC(probability=True, random_state=42)
         elif algorithm == "dt":

@@ -10,7 +10,8 @@ export default function Step5({ onNext, onPrev, trainResults }) {
         >
           <h3 style={{ color: "var(--navy)" }}>No Model Trained Yet</h3>
           <p style={{ color: "var(--mid)", marginTop: "10px" }}>
-            Please go back to Step 4, select an algorithm, and click "Train Model".
+            Please go back to Step 4, select an algorithm, and click "Train
+            Model".
           </p>
           <button
             className="btn primary"
@@ -26,7 +27,6 @@ export default function Step5({ onNext, onPrev, trainResults }) {
 
   const { metrics, confusion_matrix, model_used } = trainResults;
 
-  // ROC Eğrisi için dinamik SVG Yüksekliği (AUC skoruna göre temsili eğim)
   const rocCurvePath =
     metrics.auc > 0.5
       ? `M 0,200 Q 20,${200 - metrics.auc * 200} 200,0`
@@ -58,24 +58,27 @@ export default function Step5({ onNext, onPrev, trainResults }) {
               Performance Metrics — {model_used.toUpperCase()}
             </div>
 
+            {/* 5 Metrik Grid (AUC aşağıda olacak şekilde toplam 6) */}
             <div
               style={{
                 display: "grid",
-                gridTemplateColumns: "repeat(3, 1fr)",
-                gap: "10px",
+                gridTemplateColumns: "repeat(5, 1fr)",
+                gap: "8px",
               }}
             >
               <div
+                title="Out of all test patients, what percentage did the AI classify correctly?"
                 style={{
                   border: "1px solid var(--line)",
-                  borderRadius: "12px",
-                  padding: "15px 10px",
+                  borderRadius: "8px",
+                  padding: "10px 5px",
                   textAlign: "center",
+                  cursor: "help",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "26px",
+                    fontSize: "20px",
                     fontWeight: 600,
                     color: "var(--navy)",
                   }}
@@ -84,28 +87,31 @@ export default function Step5({ onNext, onPrev, trainResults }) {
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "9px",
                     fontWeight: 600,
                     color: "var(--muted)",
-                    marginTop: "5px",
+                    marginTop: "4px",
                   }}
                 >
                   ACCURACY
                 </div>
               </div>
+
               <div
+                title="Of patients who WERE at risk, how many did the AI catch?"
                 style={{
                   border: `1px solid ${metrics.sensitivity < 50 ? "rgba(185,28,28,.4)" : "rgba(13,122,80,.2)"}`,
                   background:
                     metrics.sensitivity < 50 ? "#fef2f2" : "var(--good-bg)",
-                  borderRadius: "12px",
-                  padding: "15px 10px",
+                  borderRadius: "8px",
+                  padding: "10px 5px",
                   textAlign: "center",
+                  cursor: "help",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "26px",
+                    fontSize: "20px",
                     fontWeight: 600,
                     color:
                       metrics.sensitivity < 50 ? "var(--bad)" : "var(--good)",
@@ -115,28 +121,31 @@ export default function Step5({ onNext, onPrev, trainResults }) {
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "9px",
                     fontWeight: 600,
                     color:
                       metrics.sensitivity < 50 ? "var(--bad)" : "var(--good)",
-                    marginTop: "5px",
+                    marginTop: "4px",
                   }}
                 >
                   SENSITIVITY ★
                 </div>
               </div>
+
               <div
+                title="Of patients who were NOT at risk, how many did the AI correctly identify as safe?"
                 style={{
                   border: "1px solid rgba(13,122,80,.2)",
                   background: "var(--good-bg)",
-                  borderRadius: "12px",
-                  padding: "15px 10px",
+                  borderRadius: "8px",
+                  padding: "10px 5px",
                   textAlign: "center",
+                  cursor: "help",
                 }}
               >
                 <div
                   style={{
-                    fontSize: "26px",
+                    fontSize: "20px",
                     fontWeight: 600,
                     color: "var(--good)",
                   }}
@@ -145,13 +154,75 @@ export default function Step5({ onNext, onPrev, trainResults }) {
                 </div>
                 <div
                   style={{
-                    fontSize: "10px",
+                    fontSize: "9px",
                     fontWeight: 600,
                     color: "var(--good)",
-                    marginTop: "5px",
+                    marginTop: "4px",
                   }}
                 >
                   SPECIFICITY
+                </div>
+              </div>
+
+              <div
+                title="Of all patients the AI flagged as high-risk, how many actually were high-risk?"
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: "8px",
+                  padding: "10px 5px",
+                  textAlign: "center",
+                  cursor: "help",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 600,
+                    color: "var(--navy)",
+                  }}
+                >
+                  {metrics.precision || 0}%
+                </div>
+                <div
+                  style={{
+                    fontSize: "9px",
+                    fontWeight: 600,
+                    color: "var(--muted)",
+                    marginTop: "4px",
+                  }}
+                >
+                  PRECISION
+                </div>
+              </div>
+
+              <div
+                title="A combined score balancing Sensitivity and Precision."
+                style={{
+                  border: "1px solid var(--line)",
+                  borderRadius: "8px",
+                  padding: "10px 5px",
+                  textAlign: "center",
+                  cursor: "help",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "20px",
+                    fontWeight: 600,
+                    color: "var(--navy)",
+                  }}
+                >
+                  {metrics.f1_score || 0}%
+                </div>
+                <div
+                  style={{
+                    fontSize: "9px",
+                    fontWeight: 600,
+                    color: "var(--muted)",
+                    marginTop: "4px",
+                  }}
+                >
+                  F1 SCORE
                 </div>
               </div>
             </div>
@@ -182,31 +253,37 @@ export default function Step5({ onNext, onPrev, trainResults }) {
                 style={{ display: "flex", gap: "20px", alignItems: "center" }}
               >
                 <svg
-                  width="200"
-                  height="200"
+                  width="150"
+                  height="150"
                   style={{
                     background: "var(--paper)",
                     borderLeft: "2px solid var(--ink)",
                     borderBottom: "2px solid var(--ink)",
                   }}
                 >
-                  {/* Diagonal Random Guess Line */}
                   <path
-                    d="M 0,200 L 200,0"
+                    d="M 0,150 L 150,0"
                     stroke="var(--muted)"
                     strokeWidth="2"
                     strokeDasharray="5,5"
                     fill="none"
                   />
-                  {/* Model ROC Curve */}
+                  {/* ROC Çizgisi Ölçeklemesi (150px) */}
                   <path
-                    d={rocCurvePath}
+                    d={
+                      metrics.auc > 0.5
+                        ? `M 0,150 Q 15,${150 - metrics.auc * 150} 150,0`
+                        : `M 0,150 L 150,0`
+                    }
                     stroke="var(--blue)"
                     strokeWidth="3"
                     fill="none"
                   />
                 </svg>
-                <div>
+                <div
+                  title="Score for how well the model separates high-risk from low-risk patients overall."
+                  style={{ cursor: "help" }}
+                >
                   <div
                     style={{
                       fontSize: "32px",

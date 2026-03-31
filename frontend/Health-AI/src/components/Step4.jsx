@@ -8,6 +8,8 @@ export default function Step4({
   setTrainResults,
 }) {
   const [knnK, setKnnK] = useState(5);
+  const [knnDistance, setKnnDistance] = useState("euclidean"); // Yeni: KNN Distance
+  const [rfTrees, setRfTrees] = useState(100); // Yeni: Random Forest parametresi
   const [activeModel, setActiveModel] = useState("knn");
   const [isTraining, setIsTraining] = useState(false);
   const [autoRetrain, setAutoRetrain] = useState(true);
@@ -17,7 +19,6 @@ export default function Step4({
   const [latestResult, setLatestResult] = useState(null);
 
   const canvasRef = useRef(null);
-
   const [trainError, setTrainError] = useState(null);
 
   // FastAPI model training function
@@ -31,6 +32,7 @@ export default function Step4({
     formData.append("target_column", targetColumn);
     formData.append("algorithm", activeModel);
     formData.append("knn_k", knnK);
+    formData.append("knn_distance", knnDistance);
     formData.append("test_size", 0.2);
 
     try {
@@ -43,8 +45,8 @@ export default function Step4({
       if (data.status === "success") {
         setTrainResults(data);
         setLatestResult({
-          id: `${activeModel}-${activeModel === "knn" ? knnK : "default"}`,
-          name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK})` : ""}`,
+          id: `${activeModel}-${activeModel === "knn" ? `${knnK}-${knnDistance}` : "default"}`,
+          name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK}, ${knnDistance})` : ""}`,
           ...data.metrics,
         });
         setTrainError(null);
@@ -59,19 +61,18 @@ export default function Step4({
     }
   };
 
-  // AUTO-RETRAIN (Debounce): 600ms after slider change
+  // AUTO-RETRAIN (Debounce): 300ms (Sprint'e göre güncellendi)
   useEffect(() => {
     if (!autoRetrain || !file || !targetColumn) return;
     const timer = setTimeout(() => {
       handleTrain(true);
-    }, 600);
+    }, 300);
     return () => clearTimeout(timer);
-  }, [knnK, activeModel, autoRetrain]);
+  }, [knnK, rfTrees, knnDistance, activeModel, autoRetrain]);
 
   // Modeli Tabloya Ekleme (+ Compare Butonu)
   const addToCompare = () => {
     if (!latestResult) return;
-    // Aynı modelden (kopya) varsa ekleme
     if (!compareList.find((m) => m.id === latestResult.id)) {
       setCompareList([...compareList, latestResult]);
     }
@@ -247,20 +248,36 @@ export default function Step4({
                     border:
                       activeModel === model ? "none" : "1px solid var(--line2)",
                   }}
+                  title={
+                    model === "knn"
+                      ? "K-Nearest Neighbors: Compares new patients to similar past patients."
+                      : "Click to select this clinical model."
+                  }
                 >
                   {model.toUpperCase()}
                 </div>
               ))}
             </div>
 
+            {/* Parametre Panelleri */}
             {activeModel === "knn" && (
               <>
                 <div className="card-title">Parameters</div>
-                <label className="lbl">
-                  K — Number of Similar Patients to Compare
+
+                {/* KNN K Slider Tooltip eklendi */}
+                <label
+                  className="lbl"
+                  title="How many similar historical patients should the model look at to make a decision?"
+                >
+                  K — Number of Similar Patients to Compare ℹ️
                 </label>
                 <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "12px",
+                    marginBottom: "15px",
+                  }}
                 >
                   <input
                     type="range"
@@ -282,6 +299,60 @@ export default function Step4({
                     }}
                   >
                     {knnK}
+                  </div>
+                </div>
+
+                {/* KNN Distance Dropdown (Sprint isterleri için eklendi) */}
+                <label
+                  className="lbl"
+                  title="How should the model calculate 'similarity' between patient records?"
+                >
+                  Distance Metric ℹ️
+                </label>
+                <select
+                  className="sel"
+                  value={knnDistance}
+                  onChange={(e) => setKnnDistance(e.target.value)}
+                  style={{ width: "100%", marginBottom: "10px" }}
+                >
+                  <option value="euclidean">Euclidean (Straight Line)</option>
+                  <option value="manhattan">Manhattan (City Block)</option>
+                </select>
+              </>
+            )}
+
+            {activeModel === "rf" && (
+              <>
+                <div className="card-title">Parameters</div>
+                <label
+                  className="lbl"
+                  title="How many separate decision trees should the forest grow to vote on the outcome?"
+                >
+                  Number of Trees ℹ️
+                </label>
+                <div
+                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
+                >
+                  <input
+                    type="range"
+                    min="10"
+                    max="200"
+                    step="10"
+                    value={rfTrees}
+                    onChange={(e) => setRfTrees(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <div
+                    style={{
+                      padding: "4px 8px",
+                      background: "var(--sky)",
+                      color: "var(--navy)",
+                      fontWeight: 600,
+                      borderRadius: "8px",
+                      border: "1px solid var(--line2)",
+                    }}
+                  >
+                    {rfTrees}
                   </div>
                 </div>
               </>
