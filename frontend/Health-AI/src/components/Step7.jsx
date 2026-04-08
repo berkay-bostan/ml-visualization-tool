@@ -1,6 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
-export default function Step7({ onPrev, trainResults }) {
+export default function Step7({ onPrev, trainResults, file, targetColumn, datasetInfo }) {
   const [checklist, setChecklist] = useState([
     true,
     true,
@@ -31,6 +31,52 @@ export default function Step7({ onPrev, trainResults }) {
     const nw = [...checklist];
     nw[i] = !nw[i];
     setChecklist(nw);
+  };
+
+  // --- BIAS ANALYSIS STATE ---
+  const [biasData, setBiasData] = useState(null);
+  const [biasLoading, setBiasLoading] = useState(false);
+  const [biasError, setBiasError] = useState(null);
+  const [selectedSubgroupCol, setSelectedSubgroupCol] = useState("");
+
+  // Build the list of candidate columns for the demographic dropdown
+  const allColumns = datasetInfo?.columns || [];
+  const candidateColumns = allColumns.filter((col) => col !== targetColumn);
+
+  // Fetch bias analysis from backend
+  const fetchBias = async (subgroupCol) => {
+    if (!file || !targetColumn || !subgroupCol) return;
+    setBiasLoading(true);
+    setBiasError(null);
+    setBiasData(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_column", targetColumn);
+    formData.append("subgroup_column", subgroupCol);
+
+    try {
+      const resp = await fetch("http://localhost:8000/bias", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await resp.json();
+      if (data.status === "success") {
+        setBiasData(data);
+      } else {
+        setBiasError(data.message);
+      }
+    } catch (err) {
+      setBiasError("Could not connect to backend. Is FastAPI running?");
+    } finally {
+      setBiasLoading(false);
+    }
+  };
+
+  const handleSubgroupChange = (e) => {
+    const col = e.target.value;
+    setSelectedSubgroupCol(col);
+    fetchBias(col);
   };
 
   const metrics = trainResults?.metrics || {};
@@ -72,6 +118,31 @@ export default function Step7({ onPrev, trainResults }) {
           </tr>`
       )
       .join("");
+
+    // Build bias findings for certificate
+    let biasHTML = "";
+    if (biasData) {
+      const sgRows = biasData.subgroups
+        .map(
+          (sg) =>
+            `<tr>
+              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;">${sg.group}</td>
+              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;">${sg.count}</td>
+              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;">${sg.sensitivity}%</td>
+              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:${sg.status === 'BIASED' ? '#991b1b' : sg.status === 'REVIEW' ? '#92400e' : '#166534'};font-weight:600;">${sg.status === 'BIASED' ? '⚠️ BIASED' : sg.status === 'REVIEW' ? '🔍 REVIEW' : '✅ OK'}</td>
+            </tr>`
+        )
+        .join("");
+      biasHTML = `
+        <div class="section">
+          <div class="section-title">Subgroup Bias Audit (Column: ${biasData.subgroup_column})</div>
+          <table>
+            <thead><tr><th>Group</th><th>Cases</th><th>Sensitivity</th><th>Status</th></tr></thead>
+            <tbody>${sgRows}</tbody>
+          </table>
+          ${biasData.bias_detected ? `<div style="margin-top:12px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#991b1b;font-size:12px;"><b>⚠️ ${biasData.bias_message}</b></div>` : '<div style="margin-top:12px;padding:10px;background:#ecfdf5;border:1px solid #86efac;border-radius:8px;color:#166534;font-size:12px;">✅ No significant bias detected across subgroups.</div>'}
+        </div>`;
+    }
 
     const html = `<!DOCTYPE html>
 <html lang="en">
@@ -133,6 +204,8 @@ export default function Step7({ onPrev, trainResults }) {
           <div class="metric-card"><div class="metric-val">${auc}</div><div class="metric-label">AUC</div></div>
         </div>
       </div>
+
+      ${biasHTML}
 
       <div class="section">
         <div class="section-title">EU AI Act Compliance Checklist</div>
@@ -206,7 +279,7 @@ export default function Step7({ onPrev, trainResults }) {
                   </div>
                   <div style={{ flex: 1, textAlign: "center", padding: "15px", borderRadius: "10px", border: `1px solid ${sens !== "—" && sens < 60 ? "#fca5a5" : "var(--line)"}`, background: sens !== "—" && sens < 60 ? "#fef2f2" : "#f8fafc" }}>
                     <div style={{ fontSize: "24px", fontWeight: "bold", color: sens !== "—" && sens < 60 ? "var(--bad)" : "var(--navy)" }}>{sens}%</div>
-                    <div style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", marginTop: "4px" }}>Grp Sensitivity</div>
+                    <div style={{ fontSize: "10px", color: "var(--muted)", textTransform: "uppercase", marginTop: "4px" }}>Overall Sensitivity</div>
                   </div>
                   <div style={{ flex: 1, textAlign: "center", padding: "15px", borderRadius: "10px", border: "1px solid var(--line)", background: "#f8fafc" }}>
                     <div style={{ fontSize: "24px", fontWeight: "bold", color: "var(--navy)" }}>{spec}%</div>
@@ -214,7 +287,273 @@ export default function Step7({ onPrev, trainResults }) {
                   </div>
                 </div>
 
-                {/* --- SPRINT 4 BANNERS --- */}
+                {/* SUBGROUP COLUMN SELECTOR */}
+                <div style={{ marginBottom: "15px" }}>
+                  <label
+                    className="lbl"
+                    style={{ marginBottom: "6px", display: "block" }}
+                  >
+                    Which demographic feature would you like to audit for
+                    fairness?
+                  </label>
+                  <select
+                    className="sel"
+                    value={selectedSubgroupCol}
+                    onChange={handleSubgroupChange}
+                    style={{ width: "100%" }}
+                  >
+                    <option value="" disabled>
+                      — Select a column to audit —
+                    </option>
+                    {candidateColumns.map((col) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                  </select>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--muted)",
+                      marginTop: "4px",
+                    }}
+                  >
+                    Choose a column like gender, age group, or ethnicity to check
+                    if the model treats all patient groups fairly.
+                  </div>
+                </div>
+
+                {/* BIAS LOADING */}
+                {biasLoading && (
+                  <div
+                    style={{
+                      textAlign: "center",
+                      padding: "20px",
+                      color: "var(--mid)",
+                    }}
+                  >
+                    ⏳ Analysing subgroup performance...
+                  </div>
+                )}
+
+                {/* BIAS ERROR */}
+                {biasError && (
+                  <div
+                    className="banner bad"
+                    style={{ marginBottom: "15px" }}
+                  >
+                    <div className="banner-icon">❌</div>
+                    <div>{biasError}</div>
+                  </div>
+                )}
+
+                {/* BIAS AUTO-DETECTION BANNER */}
+                {biasData?.bias_detected && (
+                  <div
+                    className="banner bad"
+                    style={{
+                      background: "#fef2f2",
+                      borderColor: "#fca5a5",
+                      color: "#991b1b",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    <div className="banner-icon">🚨</div>
+                    <div>
+                      <b>Bias Auto-Detection:</b> {biasData.bias_message}
+                    </div>
+                  </div>
+                )}
+
+                {/* SUBGROUP TABLE */}
+                {biasData && !biasLoading && (
+                  <>
+                    <h4
+                      style={{
+                        fontSize: "12px",
+                        color: "var(--navy)",
+                        marginBottom: "8px",
+                        textTransform: "uppercase",
+                        letterSpacing: "1px",
+                      }}
+                    >
+                      Subgroup Fairness Audit — Column: {biasData.subgroup_column}
+                    </h4>
+                    <table
+                      style={{
+                        width: "100%",
+                        fontSize: "12px",
+                        textAlign: "left",
+                        marginBottom: "20px",
+                        borderCollapse: "collapse",
+                      }}
+                    >
+                      <thead>
+                        <tr
+                          style={{
+                            borderBottom: "1px solid var(--line)",
+                            color: "var(--muted)",
+                          }}
+                        >
+                          <th style={{ padding: "8px" }}>Group</th>
+                          <th style={{ padding: "8px" }}>Cases</th>
+                          <th style={{ padding: "8px" }}>Accuracy</th>
+                          <th style={{ padding: "8px" }}>Sensitivity</th>
+                          <th style={{ padding: "8px" }}>Specificity</th>
+                          <th style={{ padding: "8px" }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {/* Overall row */}
+                        <tr
+                          style={{
+                            borderBottom: "2px solid var(--navy)",
+                            background: "#f0f4f8",
+                            fontWeight: 600,
+                          }}
+                        >
+                          <td style={{ padding: "8px" }}>Overall</td>
+                          <td style={{ padding: "8px" }}>—</td>
+                          <td style={{ padding: "8px" }}>{biasData.overall.accuracy}%</td>
+                          <td style={{ padding: "8px" }}>{biasData.overall.sensitivity}%</td>
+                          <td style={{ padding: "8px" }}>{biasData.overall.specificity}%</td>
+                          <td style={{ padding: "8px" }}>—</td>
+                        </tr>
+                        {biasData.subgroups.map((sg) => {
+                          const isBiased = sg.status === "BIASED";
+                          const isReview = sg.status === "REVIEW";
+                          const rowBg = isBiased
+                            ? "#fef2f2"
+                            : isReview
+                            ? "#fffbeb"
+                            : "transparent";
+                          const sensColor = isBiased
+                            ? "#991b1b"
+                            : isReview
+                            ? "#92400e"
+                            : "var(--good)";
+
+                          return (
+                            <tr
+                              key={sg.group}
+                              style={{
+                                borderBottom: "1px solid var(--line)",
+                                background: rowBg,
+                              }}
+                            >
+                              <td
+                                style={{
+                                  padding: "8px",
+                                  fontWeight: isBiased ? 600 : 400,
+                                  color: isBiased ? "#991b1b" : "inherit",
+                                }}
+                              >
+                                {sg.group}
+                              </td>
+                              <td style={{ padding: "8px" }}>{sg.count}</td>
+                              <td style={{ padding: "8px" }}>{sg.accuracy}%</td>
+                              <td
+                                style={{
+                                  padding: "8px",
+                                  color: sensColor,
+                                  fontWeight: 600,
+                                }}
+                              >
+                                {sg.sensitivity}%
+                              </td>
+                              <td style={{ padding: "8px" }}>{sg.specificity}%</td>
+                              <td style={{ padding: "8px" }}>
+                                {isBiased && (
+                                  <span
+                                    style={{
+                                      background: "#fef2f2",
+                                      color: "#991b1b",
+                                      border: "1px solid #fca5a5",
+                                      padding: "2px 8px",
+                                      borderRadius: "12px",
+                                      fontSize: "10px",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    ⚠️ BIASED
+                                  </span>
+                                )}
+                                {isReview && (
+                                  <span
+                                    style={{
+                                      background: "#fffbeb",
+                                      color: "#92400e",
+                                      border: "1px solid #fde68a",
+                                      padding: "2px 8px",
+                                      borderRadius: "12px",
+                                      fontSize: "10px",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    🔍 REVIEW
+                                  </span>
+                                )}
+                                {sg.status === "OK" && (
+                                  <span
+                                    style={{
+                                      background: "#ecfdf5",
+                                      color: "#166534",
+                                      padding: "2px 8px",
+                                      borderRadius: "12px",
+                                      fontSize: "10px",
+                                      fontWeight: 600,
+                                    }}
+                                  >
+                                    ✅ OK
+                                  </span>
+                                )}
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+
+                    {/* No bias — success banner */}
+                    {!biasData.bias_detected && (
+                      <div
+                        className="banner good"
+                        style={{
+                          background: "#ecfdf5",
+                          borderColor: "#86d4a7",
+                          marginBottom: "15px",
+                        }}
+                      >
+                        <div className="banner-icon">✅</div>
+                        <div style={{ color: "#166534" }}>
+                          <b>No significant bias detected</b> across the "{biasData.subgroup_column}" subgroups. All groups have sensitivity within 10 percentage points of the overall average.
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {/* PROMPT BEFORE SELECTION */}
+                {!selectedSubgroupCol && !biasData && !biasLoading && (
+                  <div
+                    className="banner info"
+                    style={{
+                      background: "#eff6ff",
+                      borderColor: "#bfdbfe",
+                      marginBottom: "15px",
+                    }}
+                  >
+                    <div className="banner-icon">ℹ️</div>
+                    <div style={{ color: "#1e40af" }}>
+                      <b>Select a demographic column above</b> to run a subgroup
+                      fairness audit. The system will compute accuracy,
+                      sensitivity, and specificity for each group and flag any
+                      bias automatically.
+                    </div>
+                  </div>
+                )}
+
+                {/* LOW SENSITIVITY WARNING */}
                 {sens !== "—" && sens < 60 && (
                   <div className="banner bad" style={{ background: "#fef2f2", borderColor: "#fca5a5", color: "#991b1b", marginBottom: "15px" }}>
                     <div className="banner-icon">🚨</div>
@@ -225,71 +564,6 @@ export default function Step7({ onPrev, trainResults }) {
                     </div>
                   </div>
                 )}
-                
-                {sens !== "—" && (sens - 15) < sens && (
-                  <div className="banner bad" style={{ background: "#fef2f2", borderColor: "#fca5a5", color: "#991b1b", marginBottom: "15px" }}>
-                    <div className="banner-icon">🚨</div>
-                    <div>
-                      <b>Bias Auto-Detection:</b> A demographic subgroup (Elderly) has a sensitivity 
-                      score that is <b>&gt;10 percentage points below</b> the overall dataset. This model is biased and unsafe for deployment.
-                    </div>
-                  </div>
-                )}
-
-                <h4 style={{ fontSize: "12px", color: "var(--navy)", marginBottom: "8px", textTransform:"uppercase", letterSpacing:"1px" }}>Subgroup Fairness Audit</h4>
-                <table style={{ width: "100%", fontSize: "12px", textAlign: "left", marginBottom: "20px", borderCollapse: "collapse" }}>
-                  <thead>
-                    <tr style={{ borderBottom: "1px solid var(--line)", color: "var(--muted)" }}>
-                      <th style={{ padding: "8px" }}>Demographic</th>
-                      <th style={{ padding: "8px" }}>Cases</th>
-                      <th style={{ padding: "8px" }}>Sensitivity</th>
-                      <th style={{ padding: "8px" }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {/* Dummy robust data for bias illustration to pass Sprints checklist */}
-                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td style={{ padding: "8px" }}>Male</td>
-                      <td style={{ padding: "8px" }}>240</td>
-                      <td style={{ padding: "8px", color: "var(--good)" }}>{Math.min(100, sens + 4)}%</td>
-                      <td style={{ padding: "8px" }}><span style={{background:"#ecfdf5", color:"#166534", padding:"2px 8px", borderRadius:"12px", fontSize:"10px", fontWeight:600}}>✅ OK</span></td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td style={{ padding: "8px" }}>Female</td>
-                      <td style={{ padding: "8px" }}>260</td>
-                      <td style={{ padding: "8px", color: "var(--navy)" }}>{Math.max(0, sens - 3)}%</td>
-                      <td style={{ padding: "8px" }}><span style={{background:"#f8fafc", color:"#334155", padding:"2px 8px", borderRadius:"12px", fontSize:"10px", fontWeight:600}}>🔍 REVIEW</span></td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid var(--line)" }}>
-                      <td style={{ padding: "8px" }}>Age &lt; 65</td>
-                      <td style={{ padding: "8px" }}>320</td>
-                      <td style={{ padding: "8px", color: "var(--good)" }}>{Math.min(100, sens + 8)}%</td>
-                      <td style={{ padding: "8px" }}><span style={{background:"#ecfdf5", color:"#166534", padding:"2px 8px", borderRadius:"12px", fontSize:"10px", fontWeight:600}}>✅ OK</span></td>
-                    </tr>
-                    <tr style={{ borderBottom: "1px solid var(--line)", background: "#fef2f2" }}>
-                      <td style={{ padding: "8px", color: "#991b1b", fontWeight: 600 }}>Age ≥ 65</td>
-                      <td style={{ padding: "8px", color: "#991b1b" }}>180</td>
-                      <td style={{ padding: "8px", color: "#991b1b", fontWeight: 600 }}>{Math.max(0, sens - 15)}%</td>
-                      <td style={{ padding: "8px" }}><span style={{background:"#fef2f2", color:"#991b1b", border:"1px solid #fca5a5", padding:"2px 8px", borderRadius:"12px", fontSize:"10px", fontWeight:600}}>⚠️ BIASED</span></td>
-                    </tr>
-                  </tbody>
-                </table>
-
-                <h4 style={{ fontSize: "12px", color: "var(--navy)", marginBottom: "8px", textTransform:"uppercase", letterSpacing:"1px" }}>Training Data vs Real Population Chart</h4>
-                <div style={{ display: "grid", gap: "10px", marginBottom: "10px" }}>
-                  <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                    <div style={{ width: "80px", fontSize: "11px", color: "var(--mid)", textAlign: "right" }}>Elderly Pop.</div>
-                    <div style={{ flex: 1, position: "relative" }}>
-                        <div style={{ height: "16px", background: "var(--navy)", borderRadius: "4px", width: "15%", display: "flex", alignItems: "center", color: "#fff", fontSize: "9px", paddingLeft: "4px" }}>Train (15%)</div>
-                        <div style={{ height: "16px", background: "#fca5a5", borderRadius: "4px", width: "35%", display: "flex", alignItems: "center", color: "#991b1b", fontSize: "9px", paddingLeft: "4px", marginTop: "2px" }}>Real (35%)</div>
-                    </div>
-                  </div>
-                  <div className="banner warn" style={{ background: "#fffbeb", borderColor: "#fde68a", padding: "10px" }}>
-                    <div className="banner-icon" style={{fontSize: "14px"}}>⚠️</div>
-                    <div style={{fontSize: "11px", color: "#92400e"}}><b>Data Gap Warning:</b> &gt;15pp representation gap detected for the "Elderly" group between the training set and the real population.</div>
-                  </div>
-                </div>
-
               </>
             ) : (
               <div className="banner info">

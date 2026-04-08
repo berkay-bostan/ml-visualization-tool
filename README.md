@@ -6,7 +6,7 @@ A web-based tool for exploring healthcare datasets, training ML models, and visu
 ## Tech Stack
 - Frontend: React 18 + Vite
 - Backend: FastAPI
-- ML Engine: scikit-learn
+- ML Engine: scikit-learn, imbalanced-learn (SMOTE)
 
 ## Repository Structure
 /frontend  → React application  

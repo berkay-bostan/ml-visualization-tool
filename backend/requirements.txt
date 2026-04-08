@@ -3,3 +3,4 @@ uvicorn
 pandas
 scikit-learn
 python-multipart
+imbalanced-learn

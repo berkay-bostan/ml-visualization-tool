@@ -169,6 +169,9 @@ function App() {
           <Step7
             onPrev={() => handleStepChange(6)}
             trainResults={trainResults}
+            file={file}
+            targetColumn={targetColumn}
+            datasetInfo={datasetInfo}
           />
         )}
       </div>
