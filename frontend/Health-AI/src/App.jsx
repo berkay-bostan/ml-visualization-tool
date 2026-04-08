@@ -43,6 +43,7 @@ function App() {
   const [datasetInfo, setDatasetInfo] = useState(null);
   const [targetColumn, setTargetColumn] = useState("");
   const [trainResults, setTrainResults] = useState(null);
+  const [allTrainedModels, setAllTrainedModels] = useState([]);
   const [prepResult, setPrepResult] = useState(null);
 
   // Navigasyon Modalı
@@ -55,6 +56,7 @@ function App() {
     setDatasetInfo(null);
     setTargetColumn("");
     setTrainResults(null);
+    setAllTrainedModels([]);
     setPrepResult(null);
   };
 
@@ -147,6 +149,8 @@ function App() {
             file={file}
             targetColumn={targetColumn}
             setTrainResults={setTrainResults}
+            allTrainedModels={allTrainedModels}
+            setAllTrainedModels={setAllTrainedModels}
           />
         )}
         {currentStep === 5 && (
@@ -154,6 +158,8 @@ function App() {
             onNext={() => handleStepChange(6)}
             onPrev={() => handleStepChange(4)}
             trainResults={trainResults}
+            setTrainResults={setTrainResults}
+            allTrainedModels={allTrainedModels}
           />
         )}
         {currentStep === 6 && (

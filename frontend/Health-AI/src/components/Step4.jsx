@@ -6,16 +6,16 @@ export default function Step4({
   file,
   targetColumn,
   setTrainResults,
+  allTrainedModels,
+  setAllTrainedModels,
 }) {
   const [knnK, setKnnK] = useState(5);
-  const [knnDistance, setKnnDistance] = useState("euclidean"); // Yeni: KNN Distance
-  const [rfTrees, setRfTrees] = useState(100); // Yeni: Random Forest parametresi
+  const [knnDistance, setKnnDistance] = useState("euclidean");
+  const [rfTrees, setRfTrees] = useState(100);
   const [activeModel, setActiveModel] = useState("knn");
   const [isTraining, setIsTraining] = useState(false);
   const [autoRetrain, setAutoRetrain] = useState(true);
 
-  // Eğitilen modellerin listesi (Karşılaştırma için)
-  const [compareList, setCompareList] = useState([]);
   const [latestResult, setLatestResult] = useState(null);
 
   const canvasRef = useRef(null);
@@ -44,11 +44,18 @@ export default function Step4({
 
       if (data.status === "success") {
         setTrainResults(data);
-        setLatestResult({
-          id: `${activeModel}-${activeModel === "knn" ? `${knnK}-${knnDistance}` : "default"}`,
-          name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK}, ${knnDistance})` : ""}`,
+        setLatestResult(data);
+
+        // Build unique entry for the trained models list
+        const modelEntry = {
+          id: `${activeModel}-${Date.now()}`,
+          name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK}, ${knnDistance})` : activeModel === "rf" ? `(${rfTrees} trees)` : ""}`.trim(),
+          algorithm: activeModel,
+          fullResult: data,
           ...data.metrics,
-        });
+        };
+
+        setAllTrainedModels((prev) => [...prev, modelEntry]);
         setTrainError(null);
       } else {
         setTrainError(data.message);
@@ -61,7 +68,7 @@ export default function Step4({
     }
   };
 
-  // AUTO-RETRAIN (Debounce): 300ms (Sprint'e göre güncellendi)
+  // AUTO-RETRAIN (Debounce): 300ms
   useEffect(() => {
     if (!autoRetrain || !file || !targetColumn) return;
     const timer = setTimeout(() => {
@@ -70,15 +77,7 @@ export default function Step4({
     return () => clearTimeout(timer);
   }, [knnK, rfTrees, knnDistance, activeModel, autoRetrain]);
 
-  // Modeli Tabloya Ekleme (+ Compare Butonu)
-  const addToCompare = () => {
-    if (!latestResult) return;
-    if (!compareList.find((m) => m.id === latestResult.id)) {
-      setCompareList([...compareList, latestResult]);
-    }
-  };
-
-  // KNN Grafiğini Çizen Animasyon
+  // KNN Canvas Visualisation
   useEffect(() => {
     if (activeModel !== "knn") return;
     const canvas = canvasRef.current;
@@ -93,41 +92,22 @@ export default function Step4({
     ctx.clearRect(0, 0, w, h);
 
     const pts = [
-      [0.2, 0.3, 0],
-      [0.25, 0.55, 0],
-      [0.15, 0.65, 1],
-      [0.3, 0.75, 1],
-      [0.4, 0.4, 0],
-      [0.5, 0.25, 0],
-      [0.45, 0.6, 1],
-      [0.55, 0.7, 1],
-      [0.65, 0.45, 0],
-      [0.7, 0.6, 1],
-      [0.75, 0.3, 0],
-      [0.8, 0.65, 1],
-      [0.35, 0.2, 0],
-      [0.6, 0.8, 1],
-      [0.85, 0.4, 0],
+      [0.2, 0.3, 0],[0.25, 0.55, 0],[0.15, 0.65, 1],[0.3, 0.75, 1],
+      [0.4, 0.4, 0],[0.5, 0.25, 0],[0.45, 0.6, 1],[0.55, 0.7, 1],
+      [0.65, 0.45, 0],[0.7, 0.6, 1],[0.75, 0.3, 0],[0.8, 0.65, 1],
+      [0.35, 0.2, 0],[0.6, 0.8, 1],[0.85, 0.4, 0],
     ];
     const newPt = [0.48, 0.52];
 
     const dists = pts.map(([px, py, c], i) => ({
-      i,
-      dist: Math.hypot(px - newPt[0], py - newPt[1]),
-      c,
+      i, dist: Math.hypot(px - newPt[0], py - newPt[1]), c,
     }));
     dists.sort((a, b) => a.dist - b.dist);
     const neighbors = new Set(dists.slice(0, knnK).map((d) => d.i));
     const kRadius = dists[knnK - 1]?.dist || 0.1;
 
     ctx.beginPath();
-    ctx.arc(
-      newPt[0] * w,
-      newPt[1] * h,
-      kRadius * Math.min(w, h),
-      0,
-      Math.PI * 2,
-    );
+    ctx.arc(newPt[0] * w, newPt[1] * h, kRadius * Math.min(w, h), 0, Math.PI * 2);
     ctx.strokeStyle = "rgba(26,107,154,0.35)";
     ctx.lineWidth = 1.5;
     ctx.setLineDash([5, 3]);
@@ -139,14 +119,9 @@ export default function Step4({
     pts.forEach(([px, py, c], i) => {
       ctx.beginPath();
       ctx.arc(px * w, py * h, neighbors.has(i) ? 7 : 5, 0, Math.PI * 2);
-      ctx.fillStyle =
-        c === 1
-          ? neighbors.has(i)
-            ? "#B91C1C"
-            : "rgba(185,28,28,0.4)"
-          : neighbors.has(i)
-            ? "#0D7A50"
-            : "rgba(13,122,80,0.4)";
+      ctx.fillStyle = c === 1
+        ? neighbors.has(i) ? "#B91C1C" : "rgba(185,28,28,0.4)"
+        : neighbors.has(i) ? "#0D7A50" : "rgba(13,122,80,0.4)";
       ctx.fill();
       if (neighbors.has(i)) {
         ctx.strokeStyle = c === 1 ? "#B91C1C" : "#0D7A50";
@@ -161,9 +136,7 @@ export default function Step4({
       }
     });
 
-    const sx = newPt[0] * w,
-      sy = newPt[1] * h,
-      sr = 10;
+    const sx = newPt[0] * w, sy = newPt[1] * h, sr = 10;
     ctx.fillStyle = "#0D2340";
     ctx.beginPath();
     for (let i = 0; i < 5; i++) {
@@ -209,11 +182,8 @@ export default function Step4({
           </div>
           <button
             className="btn primary"
-            onClick={() => {
-              handleTrain();
-              onNext();
-            }}
-            disabled={isTraining || !latestResult}
+            onClick={onNext}
+            disabled={allTrainedModels.length === 0}
           >
             Next Step →
           </button>
@@ -221,7 +191,7 @@ export default function Step4({
       </div>
 
       <div className="cols">
-        {/* SOL KOLON */}
+        {/* LEFT COLUMN */}
         <div>
           <div className="card">
             <div className="card-title">Choose Algorithm</div>
@@ -245,8 +215,7 @@ export default function Step4({
                     fontSize: "12px",
                     background: activeModel === model ? "var(--navy)" : "white",
                     color: activeModel === model ? "#fff" : "var(--mid)",
-                    border:
-                      activeModel === model ? "none" : "1px solid var(--line2)",
+                    border: activeModel === model ? "none" : "1px solid var(--line2)",
                   }}
                   title={
                     model === "knn"
@@ -259,62 +228,26 @@ export default function Step4({
               ))}
             </div>
 
-            {/* Parametre Panelleri */}
+            {/* Parameter Panels */}
             {activeModel === "knn" && (
               <>
                 <div className="card-title">Parameters</div>
-
-                {/* KNN K Slider Tooltip eklendi */}
                 <label
                   className="lbl"
                   title="How many similar historical patients should the model look at to make a decision?"
                 >
                   K — Number of Similar Patients to Compare ℹ️
                 </label>
-                <div
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "12px",
-                    marginBottom: "15px",
-                  }}
-                >
-                  <input
-                    type="range"
-                    min="1"
-                    max="25"
-                    step="1"
-                    value={knnK}
-                    onChange={(e) => setKnnK(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <div
-                    style={{
-                      padding: "4px 8px",
-                      background: "var(--sky)",
-                      color: "var(--navy)",
-                      fontWeight: 600,
-                      borderRadius: "8px",
-                      border: "1px solid var(--line2)",
-                    }}
-                  >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px", marginBottom: "15px" }}>
+                  <input type="range" min="1" max="25" step="1" value={knnK} onChange={(e) => setKnnK(e.target.value)} style={{ flex: 1 }} />
+                  <div style={{ padding: "4px 8px", background: "var(--sky)", color: "var(--navy)", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--line2)" }}>
                     {knnK}
                   </div>
                 </div>
-
-                {/* KNN Distance Dropdown (Sprint isterleri için eklendi) */}
-                <label
-                  className="lbl"
-                  title="How should the model calculate 'similarity' between patient records?"
-                >
+                <label className="lbl" title="How should the model calculate 'similarity' between patient records?">
                   Distance Metric ℹ️
                 </label>
-                <select
-                  className="sel"
-                  value={knnDistance}
-                  onChange={(e) => setKnnDistance(e.target.value)}
-                  style={{ width: "100%", marginBottom: "10px" }}
-                >
+                <select className="sel" value={knnDistance} onChange={(e) => setKnnDistance(e.target.value)} style={{ width: "100%", marginBottom: "10px" }}>
                   <option value="euclidean">Euclidean (Straight Line)</option>
                   <option value="manhattan">Manhattan (City Block)</option>
                 </select>
@@ -324,75 +257,31 @@ export default function Step4({
             {activeModel === "rf" && (
               <>
                 <div className="card-title">Parameters</div>
-                <label
-                  className="lbl"
-                  title="How many separate decision trees should the forest grow to vote on the outcome?"
-                >
+                <label className="lbl" title="How many separate decision trees should the forest grow to vote on the outcome?">
                   Number of Trees ℹ️
                 </label>
-                <div
-                  style={{ display: "flex", alignItems: "center", gap: "12px" }}
-                >
-                  <input
-                    type="range"
-                    min="10"
-                    max="200"
-                    step="10"
-                    value={rfTrees}
-                    onChange={(e) => setRfTrees(e.target.value)}
-                    style={{ flex: 1 }}
-                  />
-                  <div
-                    style={{
-                      padding: "4px 8px",
-                      background: "var(--sky)",
-                      color: "var(--navy)",
-                      fontWeight: 600,
-                      borderRadius: "8px",
-                      border: "1px solid var(--line2)",
-                    }}
-                  >
+                <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                  <input type="range" min="10" max="200" step="10" value={rfTrees} onChange={(e) => setRfTrees(e.target.value)} style={{ flex: 1 }} />
+                  <div style={{ padding: "4px 8px", background: "var(--sky)", color: "var(--navy)", fontWeight: 600, borderRadius: "8px", border: "1px solid var(--line2)" }}>
                     {rfTrees}
                   </div>
                 </div>
               </>
             )}
 
-            <div style={{ display: "flex", gap: "10px", marginTop: "20px" }}>
-              <button
-                className="btn teal"
-                style={{ flex: 1 }}
-                onClick={() => handleTrain(false)}
-                disabled={isTraining}
-              >
-                {isTraining ? "⏳ Training..." : "⚡ Train Model"}
-              </button>
-              <button
-                className="btn outline"
-                onClick={addToCompare}
-                disabled={!latestResult}
-              >
-                + Compare
-              </button>
-            </div>
+            <button
+              className="btn teal"
+              style={{ width: "100%", marginTop: "20px" }}
+              onClick={() => handleTrain(false)}
+              disabled={isTraining}
+            >
+              {isTraining ? "⏳ Training..." : "⚡ Train Model"}
+            </button>
 
             {trainError && (
-              <div
-                className="banner bad"
-                style={{
-                  marginTop: "12px",
-                  background: "#fef2f2",
-                  borderColor: "#fca5a5",
-                }}
-              >
+              <div className="banner bad" style={{ marginTop: "12px", background: "#fef2f2", borderColor: "#fca5a5" }}>
                 <div className="banner-icon">❌</div>
-                <div
-                  style={{
-                    color: "#991b1b",
-                    fontSize: "13px",
-                    lineHeight: 1.5,
-                  }}
-                >
+                <div style={{ color: "#991b1b", fontSize: "13px", lineHeight: 1.5 }}>
                   <b>Training Failed:</b> {trainError}
                 </div>
               </div>
@@ -400,7 +289,7 @@ export default function Step4({
           </div>
         </div>
 
-        {/* SAĞ KOLON */}
+        {/* RIGHT COLUMN */}
         <div>
           {activeModel === "knn" && (
             <div className="card">
@@ -418,14 +307,23 @@ export default function Step4({
             </div>
           )}
 
-          {/* KARŞILAŞTIRMA TABLOSU */}
-          {compareList.length > 0 && (
-            <div className="card" style={{ marginTop: "15px" }}>
-              <div className="card-title">Model Comparison</div>
+          {/* TRAINED MODELS TABLE */}
+          <div className="card" style={{ marginTop: activeModel === "knn" ? "15px" : "0" }}>
+            <div className="card-title">
+              Trained Models ({allTrainedModels.length})
+            </div>
+            {allTrainedModels.length === 0 ? (
+              <div style={{ padding: "20px", textAlign: "center", color: "var(--muted)", fontSize: "13px" }}>
+                Train a model to see it listed here. You can train multiple
+                models with different algorithms and parameters, then compare
+                them in Step 5.
+              </div>
+            ) : (
               <div className="tbl-wrap">
                 <table>
                   <thead>
                     <tr>
+                      <th>#</th>
                       <th>Model & Settings</th>
                       <th>Accuracy</th>
                       <th>Sensitivity ★</th>
@@ -434,16 +332,17 @@ export default function Step4({
                     </tr>
                   </thead>
                   <tbody>
-                    {compareList.map((res, i) => (
-                      <tr key={i}>
+                    {allTrainedModels.map((res, i) => (
+                      <tr key={res.id} style={{
+                        background: i === allTrainedModels.length - 1 ? "rgba(13,122,80,0.05)" : "transparent",
+                        borderLeft: i === allTrainedModels.length - 1 ? "3px solid var(--teal)" : "3px solid transparent",
+                      }}>
+                        <td style={{ color: "var(--muted)", fontSize: "11px" }}>{i + 1}</td>
                         <td style={{ fontWeight: 600 }}>{res.name}</td>
                         <td>{res.accuracy}%</td>
                         <td
                           style={{
-                            color:
-                              res.sensitivity < 70
-                                ? "var(--bad)"
-                                : "var(--good)",
+                            color: res.sensitivity < 70 ? "var(--bad)" : "var(--good)",
                             fontWeight: 600,
                           }}
                         >
@@ -456,8 +355,8 @@ export default function Step4({
                   </tbody>
                 </table>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -475,6 +374,9 @@ export default function Step4({
       >
         <button className="btn outline" onClick={onPrev}>
           ← Previous
+        </button>
+        <button className="btn primary" onClick={onNext} disabled={allTrainedModels.length === 0}>
+          Next Step →
         </button>
       </div>
     </section>
