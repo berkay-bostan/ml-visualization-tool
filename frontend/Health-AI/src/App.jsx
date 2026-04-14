@@ -178,6 +178,7 @@ function App() {
             file={file}
             targetColumn={targetColumn}
             datasetInfo={datasetInfo}
+            selectedDomain={selectedDomain}
           />
         )}
       </div>

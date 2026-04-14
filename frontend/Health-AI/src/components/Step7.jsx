@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-export default function Step7({ onPrev, trainResults, file, targetColumn, datasetInfo }) {
+export default function Step7({ onPrev, trainResults, file, targetColumn, datasetInfo, selectedDomain }) {
   const [checklist, setChecklist] = useState([
     true,
     true,
@@ -38,6 +38,15 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
   const [biasLoading, setBiasLoading] = useState(false);
   const [biasError, setBiasError] = useState(null);
   const [selectedSubgroupCol, setSelectedSubgroupCol] = useState("");
+
+  // --- TRAINING DISTRIBUTION STATE ---
+  const [distData, setDistData] = useState(null);
+  const [distLoading, setDistLoading] = useState(false);
+  const [distError, setDistError] = useState(null);
+  const [selectedDistCol, setSelectedDistCol] = useState("");
+
+  // --- PDF DOWNLOAD STATE ---
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   // Build the list of candidate columns for the demographic dropdown
   const allColumns = datasetInfo?.columns || [];
@@ -79,6 +88,42 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
     fetchBias(col);
   };
 
+  // Fetch training distribution from backend
+  const fetchDistribution = async (demoCol) => {
+    if (!file || !targetColumn || !demoCol) return;
+    setDistLoading(true);
+    setDistError(null);
+    setDistData(null);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("target_column", targetColumn);
+    formData.append("demographic_column", demoCol);
+
+    try {
+      const resp = await fetch("http://localhost:8000/training-distribution", {
+        method: "POST",
+        body: formData,
+      });
+      const data = await resp.json();
+      if (data.status === "success") {
+        setDistData(data);
+      } else {
+        setDistError(data.message);
+      }
+    } catch (err) {
+      setDistError("Could not connect to backend. Is FastAPI running?");
+    } finally {
+      setDistLoading(false);
+    }
+  };
+
+  const handleDistColChange = (e) => {
+    const col = e.target.value;
+    setSelectedDistCol(col);
+    fetchDistribution(col);
+  };
+
   const metrics = trainResults?.metrics || {};
   const acc = metrics.accuracy || "—";
   const sens = metrics.sensitivity || "—";
@@ -92,8 +137,9 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
   const completed = checklist.filter(Boolean).length;
   const total = checklist.length;
 
-  // 📄 DOWNLOAD CERTIFICATE
-  const downloadCertificate = () => {
+  // 📄 DOWNLOAD CERTIFICATE (Real PDF via Backend)
+  const downloadCertificate = async () => {
+    setPdfLoading(true);
     const now = new Date();
     const dateStr = now.toLocaleDateString("en-GB", {
       day: "2-digit",
@@ -105,139 +151,58 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
       minute: "2-digit",
     });
 
-    const checklistHTML = checklistItems
-      .map(
-        (item, i) =>
-          `<tr>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;color:${checklist[i] ? "#166534" : "#991b1b"};">
-              ${checklist[i] ? "✅" : "❌"} ${item}
-            </td>
-            <td style="padding:8px 12px;border-bottom:1px solid #e5e7eb;font-size:13px;font-weight:600;color:${checklist[i] ? "#166534" : "#991b1b"};">
-              ${checklist[i] ? "PASSED" : "NOT COMPLETED"}
-            </td>
-          </tr>`
-      )
-      .join("");
+    // Build checklist items with status
+    const checklistPayload = [
+      "Model is explainable (outputs have reasons)",
+      "Training data is documented",
+      "Subgroup bias audit completed",
+      "Human oversight plan defined",
+      "Patient data privacy protected",
+      "Drift monitoring plan established",
+      "Incident reporting pathway defined",
+      "Clinical validation completed",
+    ].map((text, i) => ({
+      text,
+      checked: checklist[i] || false,
+    }));
 
-    // Build bias findings for certificate
-    let biasHTML = "";
-    if (biasData) {
-      const sgRows = biasData.subgroups
-        .map(
-          (sg) =>
-            `<tr>
-              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;">${sg.group}</td>
-              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;">${sg.count}</td>
-              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;">${sg.sensitivity}%</td>
-              <td style="padding:6px 12px;border-bottom:1px solid #e5e7eb;font-size:12px;color:${sg.status === 'BIASED' ? '#991b1b' : sg.status === 'REVIEW' ? '#92400e' : '#166534'};font-weight:600;">${sg.status === 'BIASED' ? '⚠️ BIASED' : sg.status === 'REVIEW' ? '🔍 REVIEW' : '✅ OK'}</td>
-            </tr>`
-        )
-        .join("");
-      biasHTML = `
-        <div class="section">
-          <div class="section-title">Subgroup Bias Audit (Column: ${biasData.subgroup_column})</div>
-          <table>
-            <thead><tr><th>Group</th><th>Cases</th><th>Sensitivity</th><th>Status</th></tr></thead>
-            <tbody>${sgRows}</tbody>
-          </table>
-          ${biasData.bias_detected ? `<div style="margin-top:12px;padding:10px;background:#fef2f2;border:1px solid #fca5a5;border-radius:8px;color:#991b1b;font-size:12px;"><b>⚠️ ${biasData.bias_message}</b></div>` : '<div style="margin-top:12px;padding:10px;background:#ecfdf5;border:1px solid #86efac;border-radius:8px;color:#166534;font-size:12px;">✅ No significant bias detected across subgroups.</div>'}
-        </div>`;
+    const payload = {
+      domain: selectedDomain || "Unknown",
+      model_used: modelUsed,
+      metrics: metrics,
+      checklist_items: checklistPayload,
+      bias_data: biasData || null,
+      date: `${dateStr} at ${timeStr}`,
+      completed_count: completed,
+      total_count: total,
+    };
+
+    try {
+      const resp = await fetch("http://localhost:8000/api/generate-certificate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!resp.ok) {
+        throw new Error("Failed to generate PDF");
+      }
+
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `HEALTH-AI_Certificate_${now.toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      alert("Could not generate PDF certificate. Is the backend running?");
+      console.error(err);
+    } finally {
+      setPdfLoading(false);
     }
-
-    const html = `<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>HEALTH-AI Summary Certificate</title>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap');
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'DM Sans', sans-serif; background: #f7f9fb; color: #0d1b2a; padding: 40px; }
-    .cert { max-width: 800px; margin: 0 auto; background: #fff; border-radius: 16px; box-shadow: 0 4px 24px rgba(13,35,64,0.12); overflow: hidden; }
-    .cert-header { background: linear-gradient(135deg, #0d2340, #1a6b9a); color: #fff; padding: 40px; text-align: center; }
-    .cert-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 6px; }
-    .cert-header p { font-size: 14px; opacity: 0.7; }
-    .cert-logo { width: 60px; height: 60px; border-radius: 16px; background: rgba(255,255,255,0.15); display: inline-flex; align-items: center; justify-content: center; font-size: 28px; font-weight: 700; margin-bottom: 16px; border: 2px solid rgba(255,255,255,0.2); }
-    .cert-body { padding: 30px 40px; }
-    .section { margin-bottom: 28px; }
-    .section-title { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1.5px; color: #7a92a3; margin-bottom: 12px; border-bottom: 2px solid #e5e7eb; padding-bottom: 8px; }
-    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .metric-card { text-align: center; padding: 18px 10px; border-radius: 12px; border: 1px solid #e5e7eb; background: #f8fafc; }
-    .metric-val { font-size: 28px; font-weight: 700; color: #0d2340; }
-    .metric-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a92a3; margin-top: 4px; }
-    table { width: 100%; border-collapse: collapse; }
-    th { text-align: left; padding: 8px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; color: #7a92a3; border-bottom: 2px solid #e5e7eb; }
-    .footer { text-align: center; padding: 20px 40px 30px; border-top: 1px solid #e5e7eb; color: #7a92a3; font-size: 11px; }
-    .status-badge { display: inline-block; padding: 4px 14px; border-radius: 999px; font-size: 12px; font-weight: 600; }
-    .badge-pass { background: #ecfdf5; color: #166534; border: 1px solid #86efac; }
-    .badge-fail { background: #fef2f2; color: #991b1b; border: 1px solid #fca5a5; }
-    .badge-warn { background: #fffbeb; color: #92400e; border: 1px solid #fde68a; }
-    @media print { body { padding: 0; background: #fff; } .cert { box-shadow: none; } }
-  </style>
-</head>
-<body>
-  <div class="cert">
-    <div class="cert-header">
-      <div class="cert-logo">H</div>
-      <h1>HEALTH-AI · ML Learning Summary</h1>
-      <p>Erasmus+ KA220-HED · Machine Learning for Healthcare Professionals</p>
-    </div>
-    <div class="cert-body">
-      <div class="section">
-        <div class="section-title">Certificate Details</div>
-        <table>
-          <tr><td style="padding:6px 0;font-size:13px;color:#7a92a3;width:160px;">Date</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${dateStr} at ${timeStr}</td></tr>
-          <tr><td style="padding:6px 0;font-size:13px;color:#7a92a3;">Model Algorithm</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${modelUsed}</td></tr>
-          <tr><td style="padding:6px 0;font-size:13px;color:#7a92a3;">Checklist Progress</td><td style="padding:6px 0;font-size:13px;font-weight:600;">${completed} / ${total} items completed</td></tr>
-          <tr><td style="padding:6px 0;font-size:13px;color:#7a92a3;">Overall Status</td><td style="padding:6px 0;"><span class="status-badge ${completed === total ? "badge-pass" : completed >= total / 2 ? "badge-warn" : "badge-fail"}">${completed === total ? "✅ ALL CHECKS PASSED" : completed >= total / 2 ? "⚠ PARTIALLY COMPLETE" : "❌ NOT READY FOR DEPLOYMENT"}</span></td></tr>
-        </table>
-      </div>
-
-      <div class="section">
-        <div class="section-title">Model Performance Metrics</div>
-        <div class="metrics-grid">
-          <div class="metric-card"><div class="metric-val">${acc}%</div><div class="metric-label">Accuracy</div></div>
-          <div class="metric-card"><div class="metric-val">${sens}%</div><div class="metric-label">Sensitivity</div></div>
-          <div class="metric-card"><div class="metric-val">${spec}%</div><div class="metric-label">Specificity</div></div>
-          <div class="metric-card"><div class="metric-val">${prec}%</div><div class="metric-label">Precision</div></div>
-          <div class="metric-card"><div class="metric-val">${f1}%</div><div class="metric-label">F1 Score</div></div>
-          <div class="metric-card"><div class="metric-val">${auc}</div><div class="metric-label">AUC</div></div>
-        </div>
-      </div>
-
-      ${biasHTML}
-
-      <div class="section">
-        <div class="section-title">EU AI Act Compliance Checklist</div>
-        <table>
-          <thead><tr><th>Requirement</th><th style="width:140px;">Status</th></tr></thead>
-          <tbody>${checklistHTML}</tbody>
-        </table>
-      </div>
-
-      <div class="section" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:16px;">
-        <div style="font-size:13px;color:#1e40af;line-height:1.6;">
-          <b>⚠️ Disclaimer:</b> This certificate is for educational purposes only. It documents the ML workflow completed during this learning session. It does NOT constitute clinical validation or regulatory approval. Any AI model must undergo formal clinical trials and regulatory review before deployment in healthcare settings.
-        </div>
-      </div>
-    </div>
-    <div class="footer">
-      HEALTH-AI · Erasmus+ KA220-HED · Generated on ${dateStr}<br>
-      This document is for educational and training purposes only.
-    </div>
-  </div>
-</body>
-</html>`;
-
-    const blob = new Blob([html], { type: "text/html;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `HEALTH-AI_Certificate_${now.toISOString().slice(0, 10)}.html`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -254,8 +219,12 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
           </p>
         </div>
         <div className="hdr-right">
-          <button className="btn teal" onClick={downloadCertificate}>
-            📄 Download Summary Certificate
+          <button
+            className="btn teal"
+            onClick={downloadCertificate}
+            disabled={pdfLoading}
+          >
+            {pdfLoading ? "⏳ Generating PDF..." : "📄 Download Summary Certificate"}
           </button>
         </div>
       </div>
@@ -576,6 +545,201 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
             )}
           </div>
 
+          {/* ── TRAINING DATA REPRESENTATIVENESS CHART ── */}
+          <div className="card">
+            <div className="card-title">
+              Training Data Representativeness — Population Comparison
+            </div>
+            <p style={{ fontSize: "12px", color: "var(--mid)", marginBottom: "12px", lineHeight: 1.5 }}>
+              Compare your model's training data demographics against the full patient population.
+              Large gaps (&gt;15 percentage points) suggest the model may not generalise well to underrepresented groups.
+            </p>
+
+            {trainResults ? (
+              <>
+                <div style={{ marginBottom: "15px" }}>
+                  <label className="lbl" style={{ marginBottom: "6px", display: "block" }}>
+                    Select a demographic column to compare:
+                  </label>
+                  <select
+                    className="sel"
+                    value={selectedDistCol}
+                    onChange={handleDistColChange}
+                    style={{ width: "100%" }}
+                  >
+                    <option value="" disabled>
+                      — Select a column —
+                    </option>
+                    {candidateColumns.map((col) => (
+                      <option key={col} value={col}>
+                        {col}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {distLoading && (
+                  <div style={{ textAlign: "center", padding: "20px", color: "var(--mid)" }}>
+                    ⏳ Computing distribution comparison...
+                  </div>
+                )}
+
+                {distError && (
+                  <div className="banner bad" style={{ marginBottom: "15px" }}>
+                    <div className="banner-icon">❌</div>
+                    <div>{distError}</div>
+                  </div>
+                )}
+
+                {distData && !distLoading && (
+                  <>
+                    {/* AMBER WARNING */}
+                    {distData.has_warnings && (
+                      <div
+                        className="banner warn"
+                        style={{
+                          background: "#fffbeb",
+                          borderColor: "#fde68a",
+                          color: "#92400e",
+                          marginBottom: "15px",
+                        }}
+                      >
+                        <div className="banner-icon">⚠️</div>
+                        <div>
+                          <b>Representativeness Warning:</b> The following groups have a &gt;15 percentage point gap between training data and the real population:
+                          <ul style={{ margin: "6px 0 0 16px", fontSize: "12px" }}>
+                            {distData.warning_messages.map((msg, i) => (
+                              <li key={i}>{msg}</li>
+                            ))}
+                          </ul>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* BAR CHART */}
+                    <div style={{ display: "grid", gap: "14px" }}>
+                      {distData.comparison.map((item) => {
+                        const maxPct = Math.max(item.real_population_pct, item.training_data_pct, 1);
+                        const barScale = 100 / Math.max(maxPct, 50); // scale so bars are visible
+
+                        return (
+                          <div key={item.group}>
+                            <div style={{
+                              display: "flex",
+                              justifyContent: "space-between",
+                              alignItems: "center",
+                              marginBottom: "4px",
+                            }}>
+                              <span style={{
+                                fontSize: "12px",
+                                fontWeight: 600,
+                                color: item.warning ? "#92400e" : "var(--navy)",
+                              }}>
+                                {item.group}
+                                {item.warning && (
+                                  <span style={{
+                                    marginLeft: "8px",
+                                    background: "#fffbeb",
+                                    color: "#92400e",
+                                    border: "1px solid #fde68a",
+                                    padding: "1px 6px",
+                                    borderRadius: "8px",
+                                    fontSize: "9px",
+                                    fontWeight: 600,
+                                  }}>
+                                    {item.gap_pp} pp gap
+                                  </span>
+                                )}
+                              </span>
+                            </div>
+                            {/* Training Data Bar */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px", marginBottom: "3px" }}>
+                              <div style={{ width: "80px", fontSize: "10px", color: "var(--mid)", textAlign: "right" }}>Training</div>
+                              <div style={{ flex: 1, height: "8px", borderRadius: "999px", background: "var(--line)" }}>
+                                <div style={{
+                                  width: `${item.training_data_pct * barScale}%`,
+                                  height: "100%",
+                                  borderRadius: "999px",
+                                  background: item.warning ? "#f59e0b" : "var(--navy)",
+                                  transition: "width 0.4s ease",
+                                }}></div>
+                              </div>
+                              <div style={{ width: "45px", fontSize: "11px", fontWeight: 600 }}>{item.training_data_pct}%</div>
+                            </div>
+                            {/* Real Population Bar */}
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div style={{ width: "80px", fontSize: "10px", color: "var(--mid)", textAlign: "right" }}>Population</div>
+                              <div style={{ flex: 1, height: "8px", borderRadius: "999px", background: "var(--line)" }}>
+                                <div style={{
+                                  width: `${item.real_population_pct * barScale}%`,
+                                  height: "100%",
+                                  borderRadius: "999px",
+                                  background: "var(--teal)",
+                                  transition: "width 0.4s ease",
+                                }}></div>
+                              </div>
+                              <div style={{ width: "45px", fontSize: "11px", fontWeight: 600 }}>{item.real_population_pct}%</div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+
+                    {/* Legend */}
+                    <div style={{ display: "flex", gap: "20px", marginTop: "14px", fontSize: "10px", color: "var(--mid)" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                        <div style={{ width: "12px", height: "8px", borderRadius: "4px", background: "var(--navy)" }}></div>
+                        Training Data ({distData.total_training} patients)
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                        <div style={{ width: "12px", height: "8px", borderRadius: "4px", background: "var(--teal)" }}></div>
+                        Full Population ({distData.total_real} patients)
+                      </div>
+                      <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+                        <div style={{ width: "12px", height: "8px", borderRadius: "4px", background: "#f59e0b" }}></div>
+                        &gt;15pp Gap (Amber Warning)
+                      </div>
+                    </div>
+
+                    {/* No warnings — success */}
+                    {!distData.has_warnings && (
+                      <div
+                        className="banner good"
+                        style={{
+                          background: "#ecfdf5",
+                          borderColor: "#86d4a7",
+                          marginTop: "12px",
+                        }}
+                      >
+                        <div className="banner-icon">✅</div>
+                        <div style={{ color: "#166534" }}>
+                          <b>Training data is representative.</b> No demographic group has a gap exceeding 15 percentage points compared to the full population.
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                {!selectedDistCol && !distData && !distLoading && (
+                  <div className="banner info" style={{ background: "#eff6ff", borderColor: "#bfdbfe" }}>
+                    <div className="banner-icon">ℹ️</div>
+                    <div style={{ color: "#1e40af" }}>
+                      <b>Select a demographic column above</b> to compare training data distribution
+                      against the full patient population. This helps identify potential representativeness issues.
+                    </div>
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="banner info">
+                <div className="banner-icon">ℹ️</div>
+                <div>
+                  Train a model in Step 4 first to enable population comparison analysis.
+                </div>
+              </div>
+            )}
+          </div>
+
           <div className="card">
             <div className="card-title">
               Real-World AI Failures in Healthcare — What Goes Wrong
@@ -778,8 +942,12 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
         <button className="btn outline" onClick={onPrev}>
           ← Previous
         </button>
-        <button className="btn teal" onClick={downloadCertificate}>
-          📄 Download Summary Certificate
+        <button
+          className="btn teal"
+          onClick={downloadCertificate}
+          disabled={pdfLoading}
+        >
+          {pdfLoading ? "⏳ Generating..." : "📄 Download Summary Certificate"}
         </button>
       </div>
     </section>

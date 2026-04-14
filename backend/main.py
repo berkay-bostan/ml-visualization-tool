@@ -1,7 +1,11 @@
+import io
+import json
+
 import pandas as pd
 import numpy as np
-from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -570,9 +574,9 @@ async def explain_model(
 
         patient_contributions.sort(key=lambda x: abs(x["contribution"]), reverse=True)
 
-        # Multi-patient list for dropdown (top 15)
+        # Multi-patient list for dropdown (top 3 per rubric requirement)
         test_patients = []
-        for i in range(min(15, len(X_test))):
+        for i in range(min(3, len(X_test))):
             risk = round(float(risk_scores[i]) * 100)
             idx = int(X_test.index[i])
             test_patients.append({
@@ -732,6 +736,323 @@ async def subgroup_bias_analysis(
             "subgroups": subgroups,
             "bias_detected": bias_detected,
             "bias_message": bias_message,
+        }
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# --- PDF CERTIFICATE GENERATION ---
+@app.post("/api/generate-certificate")
+async def generate_certificate(request: Request):
+    """
+    Generate a styled PDF certificate from the provided pipeline data.
+    Accepts JSON body with: domain, model_used, metrics, checklist_items, bias_data.
+    Returns a downloadable PDF file.
+    """
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.lib.units import mm
+        from reportlab.lib.colors import HexColor
+        from reportlab.platypus import (
+            SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, HRFlowable
+        )
+        from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+        from reportlab.lib.enums import TA_CENTER, TA_LEFT
+
+        body = await request.json()
+        domain = body.get("domain", "Unknown")
+        model_used = body.get("model_used", "Unknown")
+        metrics = body.get("metrics", {})
+        checklist_items = body.get("checklist_items", [])
+        bias_data = body.get("bias_data", None)
+        date_str = body.get("date", "")
+        completed_count = body.get("completed_count", 0)
+        total_count = body.get("total_count", 0)
+
+        buffer = io.BytesIO()
+        doc = SimpleDocTemplate(
+            buffer, pagesize=A4,
+            topMargin=20*mm, bottomMargin=20*mm,
+            leftMargin=20*mm, rightMargin=20*mm
+        )
+
+        styles = getSampleStyleSheet()
+
+        # Custom styles
+        navy = HexColor("#0d2340")
+        teal = HexColor("#1a6b9a")
+        dark_green = HexColor("#166534")
+        dark_red = HexColor("#991b1b")
+        amber = HexColor("#92400e")
+        grey = HexColor("#7a92a3")
+        light_bg = HexColor("#f8fafc")
+        white = HexColor("#ffffff")
+        line_color = HexColor("#e5e7eb")
+
+        title_style = ParagraphStyle(
+            "CertTitle", parent=styles["Title"],
+            fontSize=22, textColor=navy, spaceAfter=4,
+            alignment=TA_CENTER, fontName="Helvetica-Bold"
+        )
+        subtitle_style = ParagraphStyle(
+            "CertSubtitle", parent=styles["Normal"],
+            fontSize=10, textColor=grey, alignment=TA_CENTER, spaceAfter=16
+        )
+        section_title_style = ParagraphStyle(
+            "SectionTitle", parent=styles["Normal"],
+            fontSize=9, textColor=grey, fontName="Helvetica-Bold",
+            spaceAfter=8, spaceBefore=16,
+            borderWidth=0, borderPadding=0,
+        )
+        body_style = ParagraphStyle(
+            "BodyText2", parent=styles["Normal"],
+            fontSize=10, textColor=navy, leading=14
+        )
+        small_style = ParagraphStyle(
+            "SmallText", parent=styles["Normal"],
+            fontSize=8, textColor=grey, alignment=TA_CENTER, spaceBefore=20
+        )
+
+        elements = []
+
+        # Header
+        elements.append(Paragraph("HEALTH-AI · ML Learning Summary", title_style))
+        elements.append(Paragraph(
+            "Erasmus+ KA220-HED · Machine Learning for Healthcare Professionals",
+            subtitle_style
+        ))
+        elements.append(HRFlowable(width="100%", thickness=1, color=line_color, spaceAfter=10))
+
+        # Certificate Details
+        elements.append(Paragraph("CERTIFICATE DETAILS", section_title_style))
+        overall_status = (
+            "✅ ALL CHECKS PASSED" if completed_count == total_count
+            else "⚠ PARTIALLY COMPLETE" if completed_count >= total_count / 2
+            else "❌ NOT READY FOR DEPLOYMENT"
+        )
+        details_data = [
+            ["Date", date_str],
+            ["Clinical Domain", domain],
+            ["Model Algorithm", model_used.upper()],
+            ["Checklist Progress", f"{completed_count} / {total_count} items completed"],
+            ["Overall Status", overall_status],
+        ]
+        details_table = Table(details_data, colWidths=[140, 340])
+        details_table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (0, -1), "Helvetica"),
+            ("FONTNAME", (1, 0), (1, -1), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 10),
+            ("TEXTCOLOR", (0, 0), (0, -1), grey),
+            ("TEXTCOLOR", (1, 0), (1, -1), navy),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+            ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ("LINEBELOW", (0, 0), (-1, -2), 0.5, line_color),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ]))
+        elements.append(details_table)
+
+        # Model Performance Metrics
+        elements.append(Spacer(1, 10))
+        elements.append(Paragraph("MODEL PERFORMANCE METRICS", section_title_style))
+        metric_names = ["Accuracy", "Sensitivity", "Specificity", "Precision", "F1 Score", "AUC"]
+        metric_keys = ["accuracy", "sensitivity", "specificity", "precision", "f1_score", "auc"]
+        metric_values = []
+        for k in metric_keys:
+            v = metrics.get(k, "—")
+            metric_values.append(f"{v}%" if k != "auc" else str(v))
+
+        metrics_row1 = [metric_names[:3], metric_values[:3]]
+        metrics_row2 = [metric_names[3:], metric_values[3:]]
+
+        for names, vals in [metrics_row1, metrics_row2]:
+            t_data = [names, vals]
+            t = Table(t_data, colWidths=[160, 160, 160])
+            t.setStyle(TableStyle([
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica"),
+                ("FONTSIZE", (0, 0), (-1, 0), 8),
+                ("TEXTCOLOR", (0, 0), (-1, 0), grey),
+                ("FONTNAME", (0, 1), (-1, 1), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 1), (-1, 1), 18),
+                ("TEXTCOLOR", (0, 1), (-1, 1), navy),
+                ("ALIGN", (0, 0), (-1, -1), "CENTER"),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 8),
+                ("TOPPADDING", (0, 0), (-1, -1), 8),
+                ("BOX", (0, 0), (-1, -1), 0.5, line_color),
+                ("INNERGRID", (0, 0), (-1, -1), 0.5, line_color),
+                ("BACKGROUND", (0, 0), (-1, -1), light_bg),
+            ]))
+            elements.append(t)
+            elements.append(Spacer(1, 4))
+
+        # Bias Audit (if available)
+        if bias_data and bias_data.get("subgroups"):
+            elements.append(Paragraph(
+                f"SUBGROUP BIAS AUDIT (Column: {bias_data.get('subgroup_column', '—')})",
+                section_title_style
+            ))
+            bias_header = ["Group", "Cases", "Sensitivity", "Status"]
+            bias_rows = [bias_header]
+            for sg in bias_data["subgroups"]:
+                status_text = (
+                    "⚠ BIASED" if sg["status"] == "BIASED"
+                    else "🔍 REVIEW" if sg["status"] == "REVIEW"
+                    else "✅ OK"
+                )
+                bias_rows.append([
+                    str(sg["group"]), str(sg["count"]),
+                    f"{sg['sensitivity']}%", status_text
+                ])
+            bias_table = Table(bias_rows, colWidths=[120, 80, 100, 180])
+            bias_table.setStyle(TableStyle([
+                ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ("FONTSIZE", (0, 0), (-1, -1), 9),
+                ("TEXTCOLOR", (0, 0), (-1, 0), grey),
+                ("BACKGROUND", (0, 0), (-1, 0), light_bg),
+                ("LINEBELOW", (0, 0), (-1, 0), 1, line_color),
+                ("LINEBELOW", (0, 1), (-1, -1), 0.5, line_color),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 6),
+            ]))
+            elements.append(bias_table)
+
+            if bias_data.get("bias_detected"):
+                elements.append(Spacer(1, 6))
+                elements.append(Paragraph(
+                    f"<b>⚠️ {bias_data.get('bias_message', 'Bias detected.')}</b>",
+                    ParagraphStyle("BiasWarn", parent=body_style, textColor=dark_red, fontSize=9)
+                ))
+
+        # EU AI Act Checklist
+        elements.append(Spacer(1, 6))
+        elements.append(Paragraph("EU AI ACT COMPLIANCE CHECKLIST", section_title_style))
+        cl_header = ["Requirement", "Status"]
+        cl_rows = [cl_header]
+        for item in checklist_items:
+            status_text = "✅ PASSED" if item.get("checked") else "❌ NOT COMPLETED"
+            cl_rows.append([item.get("text", ""), status_text])
+        cl_table = Table(cl_rows, colWidths=[360, 120])
+        cl_table.setStyle(TableStyle([
+            ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+            ("FONTSIZE", (0, 0), (-1, -1), 9),
+            ("TEXTCOLOR", (0, 0), (-1, 0), grey),
+            ("BACKGROUND", (0, 0), (-1, 0), light_bg),
+            ("LINEBELOW", (0, 0), (-1, 0), 1, line_color),
+            ("LINEBELOW", (0, 1), (-1, -1), 0.5, line_color),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 5),
+            ("TOPPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        elements.append(cl_table)
+
+        # Disclaimer
+        elements.append(Spacer(1, 16))
+        disclaimer_style = ParagraphStyle(
+            "Disclaimer", parent=body_style,
+            fontSize=8, textColor=teal, leading=12
+        )
+        elements.append(Paragraph(
+            "<b>⚠️ Disclaimer:</b> This certificate is for educational purposes only. "
+            "It documents the ML workflow completed during this learning session. "
+            "It does NOT constitute clinical validation or regulatory approval. "
+            "Any AI model must undergo formal clinical trials and regulatory review "
+            "before deployment in healthcare settings.",
+            disclaimer_style
+        ))
+
+        # Footer
+        elements.append(Spacer(1, 12))
+        elements.append(HRFlowable(width="100%", thickness=0.5, color=line_color, spaceAfter=8))
+        elements.append(Paragraph(
+            f"HEALTH-AI · Erasmus+ KA220-HED · Generated on {date_str}<br/>"
+            "This document is for educational and training purposes only.",
+            small_style
+        ))
+
+        doc.build(elements)
+        buffer.seek(0)
+
+        return StreamingResponse(
+            buffer,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f"attachment; filename=HEALTH-AI_Certificate.pdf"
+            }
+        )
+
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+
+
+# --- TRAINING DATA DISTRIBUTION (Training vs Real Population) ---
+@app.post("/training-distribution")
+async def training_distribution(
+    file: UploadFile = File(...),
+    target_column: str = Form(...),
+    demographic_column: str = Form(...),
+    test_size: float = Form(0.2),
+):
+    """
+    Compare training set demographic distribution against the full dataset
+    (used as a proxy for 'real population'). Returns per-group percentages
+    and flags any group with a >15 percentage point gap.
+    """
+    try:
+        df = pd.read_csv(file.file)
+
+        if target_column not in df.columns:
+            return {"status": "error", "message": f"Target column '{target_column}' not found."}
+        if demographic_column not in df.columns:
+            return {"status": "error", "message": f"Demographic column '{demographic_column}' not found."}
+
+        X = df.drop(columns=[target_column])
+        y = df[target_column]
+
+        # Encode target
+        le = LabelEncoder()
+        y_encoded = le.fit_transform(y)
+
+        # Keep demographic column for analysis
+        demo_values = df[demographic_column].copy()
+
+        # Split train/test
+        _, _, _, _, demo_train, demo_test = train_test_split(
+            X, y_encoded, demo_values,
+            test_size=test_size, random_state=42
+        )
+
+        # Full dataset distribution (proxy for "real population")
+        full_counts = demo_values.value_counts(normalize=True) * 100
+        train_counts = demo_train.value_counts(normalize=True) * 100
+
+        all_groups = sorted(set(full_counts.index) | set(train_counts.index), key=str)
+
+        comparison = []
+        warnings = []
+        for group in all_groups:
+            real_pct = round(float(full_counts.get(group, 0)), 1)
+            train_pct = round(float(train_counts.get(group, 0)), 1)
+            gap = round(abs(real_pct - train_pct), 1)
+            has_warning = gap > 15
+
+            if has_warning:
+                warnings.append(f"'{group}' group has a {gap} pp gap (Training: {train_pct}% vs Population: {real_pct}%)")
+
+            comparison.append({
+                "group": str(group),
+                "real_population_pct": real_pct,
+                "training_data_pct": train_pct,
+                "gap_pp": gap,
+                "warning": has_warning,
+            })
+
+        return {
+            "status": "success",
+            "demographic_column": demographic_column,
+            "comparison": comparison,
+            "has_warnings": len(warnings) > 0,
+            "warning_messages": warnings,
+            "total_real": len(demo_values),
+            "total_training": len(demo_train),
         }
 
     except Exception as e:

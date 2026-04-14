@@ -14,7 +14,7 @@ export default function Step4({
   const [rfTrees, setRfTrees] = useState(100);
   const [activeModel, setActiveModel] = useState("knn");
   const [isTraining, setIsTraining] = useState(false);
-  const [autoRetrain, setAutoRetrain] = useState(true);
+  const [autoRetrain, setAutoRetrain] = useState(false);
 
   const [latestResult, setLatestResult] = useState(null);
 
@@ -46,16 +46,17 @@ export default function Step4({
         setTrainResults(data);
         setLatestResult(data);
 
-        // Build unique entry for the trained models list
-        const modelEntry = {
-          id: `${activeModel}-${Date.now()}`,
-          name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK}, ${knnDistance})` : activeModel === "rf" ? `(${rfTrees} trees)` : ""}`.trim(),
-          algorithm: activeModel,
-          fullResult: data,
-          ...data.metrics,
-        };
-
-        setAllTrainedModels((prev) => [...prev, modelEntry]);
+        // Only add to the trained models table on explicit button click (not auto-retrain)
+        if (!silent) {
+          const modelEntry = {
+            id: `${activeModel}-${Date.now()}`,
+            name: `${activeModel.toUpperCase()} ${activeModel === "knn" ? `(K=${knnK}, ${knnDistance})` : activeModel === "rf" ? `(${rfTrees} trees)` : ""}`.trim(),
+            algorithm: activeModel,
+            fullResult: data,
+            ...data.metrics,
+          };
+          setAllTrainedModels((prev) => [...prev, modelEntry]);
+        }
         setTrainError(null);
       } else {
         setTrainError(data.message);
