@@ -1,0 +1,12 @@
+# SPA routing — all paths serve index.html
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# Proxy: /hf-api/* → HuggingFace Space backend
+[[redirects]]
+  from = "/hf-api/*"
+  to = "https://karakayalperen-health-ai-backend.hf.space/:splat"
+  status = 200
+  force = true
