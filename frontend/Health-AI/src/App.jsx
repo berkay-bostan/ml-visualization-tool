@@ -10,7 +10,6 @@ import Step5 from "./components/Step5";
 import Step6 from "./components/Step6";
 import Step7 from "./components/Step7";
 import NavigationModal from "./components/NavigationModal";
-import HelpModal from "./components/HelpModal";
 
 function App() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -49,7 +48,6 @@ function App() {
 
   // Navigasyon Modalı
   const [isNavModalOpen, setIsNavModalOpen] = useState(false);
-  const [isHelpModalOpen, setIsHelpModalOpen] = useState(false);
 
   // 🔄 RESET — Tüm uygulamayı sıfırla
   const handleReset = () => {
@@ -100,7 +98,6 @@ function App() {
       <Navbar
         selectedDomain={selectedDomain}
         onReset={handleReset}
-        onHelpClick={() => setIsHelpModalOpen(true)}
       />
       <div className="wrap">
         <div className="domain-bar">
@@ -190,11 +187,6 @@ function App() {
         isOpen={isNavModalOpen}
         onClose={closeNavModal}
         onGoToStep2={goToStep2}
-      />
-
-      <HelpModal
-        isOpen={isHelpModalOpen}
-        onClose={() => setIsHelpModalOpen(false)}
       />
     </>
   );
