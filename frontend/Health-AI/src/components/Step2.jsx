@@ -25,7 +25,7 @@ export default function Step2({
     formData.append("file", file);
 
     try {
-      const response = await fetch("http://localhost:8000/dataset/load", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/dataset/load`, {
         method: "POST",
         body: formData,
       });

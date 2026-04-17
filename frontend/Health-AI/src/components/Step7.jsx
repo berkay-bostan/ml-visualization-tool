@@ -65,7 +65,7 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
     formData.append("subgroup_column", subgroupCol);
 
     try {
-      const resp = await fetch("http://localhost:8000/bias", {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/bias`, {
         method: "POST",
         body: formData,
       });
@@ -101,7 +101,7 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
     formData.append("demographic_column", demoCol);
 
     try {
-      const resp = await fetch("http://localhost:8000/training-distribution", {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/training-distribution`, {
         method: "POST",
         body: formData,
       });
@@ -178,7 +178,7 @@ export default function Step7({ onPrev, trainResults, file, targetColumn, datase
     };
 
     try {
-      const resp = await fetch("http://localhost:8000/api/generate-certificate", {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/api/generate-certificate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

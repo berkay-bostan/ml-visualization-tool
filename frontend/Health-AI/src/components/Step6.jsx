@@ -299,7 +299,7 @@ export default function Step6({
     }
 
     try {
-      const resp = await fetch("http://localhost:8000/explain", {
+      const resp = await fetch(`${import.meta.env.VITE_API_URL || ""}/explain`, {
         method: "POST",
         body: formData,
       });

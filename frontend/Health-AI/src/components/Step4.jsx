@@ -36,7 +36,7 @@ export default function Step4({
     formData.append("test_size", 0.2);
 
     try {
-      const response = await fetch("http://localhost:8000/train", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/train`, {
         method: "POST",
         body: formData,
       });

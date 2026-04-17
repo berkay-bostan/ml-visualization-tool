@@ -35,7 +35,7 @@ export default function Step3({
     formData.append("apply_smote", applySmote);
 
     try {
-      const response = await fetch("http://localhost:8000/preprocess", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL || ""}/preprocess`, {
         method: "POST",
         body: formData,
       });
