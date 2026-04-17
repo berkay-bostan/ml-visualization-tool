@@ -1,6 +1,6 @@
 import React from "react";
 
-export default function Navbar({ selectedDomain, onReset }) {
+export default function Navbar({ selectedDomain, onReset, onHelpClick }) {
   return (
     <nav className="nav">
       <div className="nav-brand">
@@ -25,6 +25,7 @@ export default function Navbar({ selectedDomain, onReset }) {
         <button
           className="nav-btn"
           style={{ background: "var(--teal)", borderColor: "var(--teal)" }}
+          onClick={onHelpClick}
         >
           ? Help
         </button>
