@@ -1,12 +1,12 @@
-# SPA routing — all paths serve index.html
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
-# Proxy: /hf-api/* → HuggingFace Space backend
+# Proxy: /hf-api/* → HuggingFace Space backend (must come BEFORE catch-all)
 [[redirects]]
   from = "/hf-api/*"
   to = "https://karakayalperen-health-ai-backend.hf.space/:splat"
   status = 200
   force = true
+
+# SPA routing — all other paths serve index.html (must come LAST)
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
