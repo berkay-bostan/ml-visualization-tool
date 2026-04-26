@@ -307,11 +307,6 @@ export default function Step2({
                       ))}
                     </div>
                   </>
-                ) : (
-                  <div className="banner info">
-                    <div className="banner-icon">ℹ️</div>
-                    <div>No default datasets found on the server.</div>
-                  </div>
                 )}
               </div>
             )}
