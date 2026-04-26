@@ -42,7 +42,7 @@ export default function Step2({
       if (data.status === "success") setDatasetInfo(data);
       else setError(data.message);
     } catch (err) {
-      setError("Sunucuya bağlanılamadı. FastAPI çalışıyor mu?");
+      setError("Could not connect to server. Is FastAPI running?");
     } finally {
       setLoading(false);
     }
@@ -66,10 +66,10 @@ export default function Step2({
       if (data.status === "success") {
         setAvailableDatasets(data.datasets.filter((d) => d.file_exists));
       } else {
-        setError("Dataset listesi alınamadı.");
+        setError("Could not retrieve dataset list.");
       }
     } catch (err) {
-      setError("Backend'e bağlanılamadı. FastAPI çalışıyor mu?");
+      setError("Could not connect to backend. Is FastAPI running?");
     } finally {
       setDatasetsLoading(false);
     }
@@ -87,11 +87,11 @@ export default function Step2({
       const res = await fetch(`${API}/datasets/${datasetName}`);
       if (!res.ok) {
         const errData = await res.json();
-        throw new Error(errData.detail || "Dataset yüklenemedi.");
+        throw new Error(errData.detail || "Failed to load dataset.");
       }
       const data = await res.json();
       if (data.status !== "success") {
-        throw new Error(data.message || "Dataset yüklenemedi.");
+        throw new Error(data.message || "Failed to load dataset.");
       }
 
       setDatasetInfo(data);
@@ -102,7 +102,7 @@ export default function Step2({
       // 2. CSV dosyasını indir ve File objesine çevir
       //    (Step 3-7 formData ile file gönderdiği için bu gerekli)
       const csvRes = await fetch(`${API}/datasets/${datasetName}/download`);
-      if (!csvRes.ok) throw new Error("CSV dosyası indirilemedi.");
+      if (!csvRes.ok) throw new Error("Failed to download CSV file.");
       const csvBlob = await csvRes.blob();
       const csvFile = new File([csvBlob], `${datasetName}.csv`, {
         type: "text/csv",

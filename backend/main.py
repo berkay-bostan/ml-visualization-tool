@@ -63,50 +63,50 @@ AVAILABLE_DATASETS: dict[str, dict] = {
     "heart_failure": {
         "path": DATASETS_DIR / "heart_failure_clinical_records_dataset.csv",
         "target_col": "DEATH_EVENT",
-        "description": "UCI Heart Failure Clinical Records — 299 hasta, 12 özellik. "
-                       "Kalp yetmezliği sonrası 30 günlük ölüm riskini tahmin eder.",
+        "description": "UCI Heart Failure Clinical Records — 299 patients, 12 features. "
+                       "Predicts 30-day mortality risk after heart failure.",
     },
     # 2. Breast Cancer Coimbra — Oncology
     "breast_cancer_coimbra": {
         "path": DATASETS_DIR / "breast+cancer+coimbra.csv",
         "target_col": "Classification",
-        "description": "Breast Cancer Coimbra — 116 hasta, 9 biyobelirteç. "
-                       "Kan testi sonuçlarından meme kanseri riskini sınıflandırır (1=Sağlıklı, 2=Hasta).",
+        "description": "Breast Cancer Coimbra — 116 patients, 9 biomarkers. "
+                       "Classifies breast cancer risk from blood tests (1=Healthy, 2=Patient).",
     },
     # 3. Diabetes Early Prediction — Endocrinology
     "diabetes_early": {
         "path": DATASETS_DIR / "diabetes_data_upload.csv",
         "target_col": "class",
-        "description": "Early Stage Diabetes Risk Prediction — 520 hasta, 16 semptom. "
-                       "Erken evre diyabet riskini (Positive/Negative) tahmin eder.",
+        "description": "Early Stage Diabetes Risk Prediction — 520 patients, 16 symptoms. "
+                       "Predicts early stage diabetes risk (Positive/Negative).",
     },
     # 4. Diabetes Readmission — Pharmacy / Hospital
     "diabetes_readmission": {
         "path": DATASETS_DIR / "diabetic_data.csv",
         "target_col": "readmitted",
-        "description": "UCI Diabetes 130-US Hospitals — 100K+ hasta, 49 özellik. "
-                       "Diyabet hastalarının hastaneye yeniden yatış riskini tahmin eder.",
+        "description": "UCI Diabetes 130-US Hospitals — 100K+ patients, 49 features. "
+                       "Predicts readmission risk for diabetic patients.",
     },
     # 5. Fetal Health — Obstetrics
     "fetal_health": {
         "path": DATASETS_DIR / "fetal_health.csv",
         "target_col": "fetal_health",
-        "description": "UCI Fetal Health — 2126 kayıt, 21 kardiyotokografi özelliği. "
-                       "Fetal sağlık durumunu sınıflandırır (1=Normal, 2=Şüpheli, 3=Patolojik).",
+        "description": "UCI Fetal Health — 2126 records, 21 cardiotocography features. "
+                       "Classifies fetal health status (1=Normal, 2=Suspect, 3=Pathological).",
     },
     # 6. Stroke Prediction — Cardiology / Neurology
     "stroke_prediction": {
         "path": DATASETS_DIR / "healthcare-dataset-stroke-data.csv",
         "target_col": "stroke",
-        "description": "Kaggle Stroke Prediction — 5110 hasta, 11 özellik. "
-                       "Demografik ve klinik verilerden inme (stroke) riskini tahmin eder.",
+        "description": "Kaggle Stroke Prediction — 5110 patients, 11 features. "
+                       "Predicts stroke risk from demographic and clinical data.",
     },
     # 7. Indian Liver Patient — Hepatology
     "indian_liver_patient": {
         "path": DATASETS_DIR / "IndianLiverPatientDataset.csv",
         "target_col": "Selector",
-        "description": "Indian Liver Patient — 583 hasta, 10 kan testi sonucu. "
-                       "Karaciğer hastalığı teşhisini (1=Hasta, 2=Sağlıklı) tahmin eder.",
+        "description": "Indian Liver Patient — 583 patients, 10 blood test results. "
+                       "Predicts liver disease diagnosis (1=Patient, 2=Healthy).",
         # Bu CSV dosyasında başlık satırı bulunmadığından UCI resmi sütun isimleri verilir
         "header_names": [
             "Age", "Gender", "TB", "DB", "Alkphos", "Sgpt", "Sgot",
@@ -117,8 +117,8 @@ AVAILABLE_DATASETS: dict[str, dict] = {
     "cervical_cancer": {
         "path": DATASETS_DIR / "risk_factors_cervical_cancer.csv",
         "target_col": "Biopsy",
-        "description": "UCI Cervical Cancer Risk Factors — 858 hasta, 35 özellik. "
-                       "Demografik ve davranışsal verilerle serviks kanseri riskini tahmin eder.",
+        "description": "UCI Cervical Cancer Risk Factors — 858 patients, 35 features. "
+                       "Predicts cervical cancer risk using demographic and behavioral data.",
     },
 }
 
@@ -146,8 +146,8 @@ def get_dataset(dataset_name: str) -> dict:
     if dataset_name not in AVAILABLE_DATASETS:
         available = ", ".join(sorted(AVAILABLE_DATASETS.keys()))
         raise ValueError(
-            f"'{dataset_name}' adında bir veri seti bulunamadı. "
-            f"Mevcut veri setleri: {available}"
+            f"Dataset '{dataset_name}' not found. "
+            f"Available datasets: {available}"
         )
 
     config = AVAILABLE_DATASETS[dataset_name]
@@ -157,8 +157,8 @@ def get_dataset(dataset_name: str) -> dict:
     # 2. Dosya var mı kontrol et
     if not file_path.exists():
         raise FileNotFoundError(
-            f"Veri seti dosyası bulunamadı: {file_path}. "
-            f"Lütfen '{file_path.name}' dosyasını backend/datasets/ klasörüne ekleyin."
+            f"Dataset file not found: {file_path}. "
+            f"Please ensure it is in the datasets directory."
         )
 
     # 3. CSV'yi oku (Lazy Loading — sadece çağrıldığında okunur)
@@ -171,14 +171,14 @@ def get_dataset(dataset_name: str) -> dict:
             df = pd.read_csv(file_path)
     except Exception as exc:
         raise RuntimeError(
-            f"'{dataset_name}' veri seti okunurken hata oluştu: {exc}"
+            f"Error occurred while reading dataset '{dataset_name}': {exc}"
         ) from exc
 
     # 4. Hedef sütun kontrolü
     if target_col not in df.columns:
         raise ValueError(
-            f"Hedef sütun '{target_col}' veri setinde bulunamadı. "
-            f"Mevcut sütunlar: {list(df.columns)}"
+            f"Target column '{target_col}' not found in the dataset. "
+            f"Available columns: {list(df.columns)}"
         )
 
     # 5. Özellikler (X) ve hedef (y) olarak ayır
@@ -268,13 +268,13 @@ def download_local_dataset(dataset_name: str):
     değişmeden çalışmaya devam eder.
     """
     if dataset_name not in AVAILABLE_DATASETS:
-        raise HTTPException(status_code=404, detail=f"'{dataset_name}' bulunamadı.")
+        raise HTTPException(status_code=404, detail=f"'{dataset_name}' not found.")
 
     config = AVAILABLE_DATASETS[dataset_name]
     file_path: Path = config["path"]
 
     if not file_path.exists():
-        raise HTTPException(status_code=404, detail=f"Dosya bulunamadı: {file_path.name}")
+        raise HTTPException(status_code=404, detail=f"File not found: {file_path.name}")
 
     # header_names varsa CSV'yi oku ve header ekleyerek geri dön
     header_names = config.get("header_names")
