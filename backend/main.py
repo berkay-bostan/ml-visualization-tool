@@ -63,50 +63,50 @@ AVAILABLE_DATASETS: dict[str, dict] = {
     "heart_failure": {
         "path": DATASETS_DIR / "heart_failure_clinical_records_dataset.csv",
         "target_col": "DEATH_EVENT",
-        "description": "UCI Heart Failure Clinical Records — 299 patients, 12 features. "
-                       "Predicts 30-day mortality risk after heart failure.",
+        "description": "UCI Heart Failure Clinical Records — 299 patients, 12 features. Predicts 30-day mortality risk after heart failure.",
+        "domain": "Cardiology",
     },
     # 2. Breast Cancer Coimbra — Oncology
     "breast_cancer_coimbra": {
         "path": DATASETS_DIR / "breast+cancer+coimbra.csv",
         "target_col": "Classification",
-        "description": "Breast Cancer Coimbra — 116 patients, 9 biomarkers. "
-                       "Classifies breast cancer risk from blood tests (1=Healthy, 2=Patient).",
+        "description": "Breast Cancer Coimbra — 116 patients, 9 biomarkers. Classifies breast cancer risk from blood tests (1=Healthy, 2=Patient).",
+        "domain": "Oncology — Breast",
     },
     # 3. Diabetes Early Prediction — Endocrinology
     "diabetes_early": {
         "path": DATASETS_DIR / "diabetes_data_upload.csv",
         "target_col": "class",
-        "description": "Early Stage Diabetes Risk Prediction — 520 patients, 16 symptoms. "
-                       "Predicts early stage diabetes risk (Positive/Negative).",
+        "description": "Early Stage Diabetes Risk Prediction — 520 patients, 16 symptoms. Predicts early stage diabetes risk (Positive/Negative).",
+        "domain": "Endocrinology — Diabetes",
     },
     # 4. Diabetes Readmission — Pharmacy / Hospital
     "diabetes_readmission": {
         "path": DATASETS_DIR / "diabetic_data.csv",
         "target_col": "readmitted",
-        "description": "UCI Diabetes 130-US Hospitals — 100K+ patients, 49 features. "
-                       "Predicts readmission risk for diabetic patients.",
+        "description": "UCI Diabetes 130-US Hospitals — 100K+ patients, 49 features. Predicts readmission risk for diabetic patients.",
+        "domain": "Pharmacy — Readmission",
     },
     # 5. Fetal Health — Obstetrics
     "fetal_health": {
         "path": DATASETS_DIR / "fetal_health.csv",
         "target_col": "fetal_health",
-        "description": "UCI Fetal Health — 2126 records, 21 cardiotocography features. "
-                       "Classifies fetal health status (1=Normal, 2=Suspect, 3=Pathological).",
+        "description": "UCI Fetal Health — 2126 records, 21 cardiotocography features. Classifies fetal health status (1=Normal, 2=Suspect, 3=Pathological).",
+        "domain": "Obstetrics — Fetal Health",
     },
     # 6. Stroke Prediction — Cardiology / Neurology
     "stroke_prediction": {
         "path": DATASETS_DIR / "healthcare-dataset-stroke-data.csv",
         "target_col": "stroke",
-        "description": "Kaggle Stroke Prediction — 5110 patients, 11 features. "
-                       "Predicts stroke risk from demographic and clinical data.",
+        "description": "Kaggle Stroke Prediction — 5110 patients, 11 features. Predicts stroke risk from demographic and clinical data.",
+        "domain": "Cardiology — Stroke",
     },
     # 7. Indian Liver Patient — Hepatology
     "indian_liver_patient": {
         "path": DATASETS_DIR / "IndianLiverPatientDataset.csv",
         "target_col": "Selector",
-        "description": "Indian Liver Patient — 583 patients, 10 blood test results. "
-                       "Predicts liver disease diagnosis (1=Patient, 2=Healthy).",
+        "description": "Indian Liver Patient — 583 patients, 10 blood test results. Predicts liver disease diagnosis (1=Patient, 2=Healthy).",
+        "domain": "Hepatology — Liver",
         # Bu CSV dosyasında başlık satırı bulunmadığından UCI resmi sütun isimleri verilir
         "header_names": [
             "Age", "Gender", "TB", "DB", "Alkphos", "Sgpt", "Sgot",
@@ -117,8 +117,80 @@ AVAILABLE_DATASETS: dict[str, dict] = {
     "cervical_cancer": {
         "path": DATASETS_DIR / "risk_factors_cervical_cancer.csv",
         "target_col": "Biopsy",
-        "description": "UCI Cervical Cancer Risk Factors — 858 patients, 35 features. "
-                       "Predicts cervical cancer risk using demographic and behavioral data.",
+        "description": "UCI Cervical Cancer Risk Factors — 858 patients, 35 features. Predicts cervical cancer risk using demographic and behavioral data.",
+        "domain": "Oncology — Cervical",
+    },
+    "radiology_breast": {
+        "path": DATASETS_DIR / "radiology_breast.csv",
+        "target_col": "Diagnosis",
+        "description": "Breast Cancer Wisconsin (Diagnostic). Predicts malignant vs benign from cell nuclei features.",
+        "domain": "Radiology",
+    },
+    "nephrology_ckd": {
+        "path": DATASETS_DIR / "nephrology_ckd.csv",
+        "target_col": "class",
+        "description": "Chronic Kidney Disease dataset. Predicts CKD presence from blood/urine tests.",
+        "domain": "Nephrology",
+    },
+    "neurology_parkinsons": {
+        "path": DATASETS_DIR / "neurology_parkinsons.csv",
+        "target_col": "status",
+        "description": "Parkinsons dataset. Predicts Parkinson's presence from voice measurements.",
+        "domain": "Neurology — Parkinson's",
+    },
+    "mental_health_autism": {
+        "path": DATASETS_DIR / "mental_health_autism.csv",
+        "target_col": "Class/ASD",
+        "description": "Autism Screening dataset. Predicts ASD presence from behavioral traits.",
+        "domain": "Mental Health",
+    },
+    "pulmonology_thoracic": {
+        "path": DATASETS_DIR / "pulmonology_thoracic.csv",
+        "target_col": "Risk1Yr",
+        "description": "Thoracic Surgery Data. Predicts 1 year survival after surgery.",
+        "domain": "Pulmonology — COPD",
+    },
+    "haematology_blood": {
+        "path": DATASETS_DIR / "haematology_blood.csv",
+        "target_col": "Donated_Blood",
+        "description": "Blood Transfusion Service Center dataset. Predicts blood donation.",
+        "domain": "Haematology — Anaemia",
+    },
+    "dermatology_erythemato": {
+        "path": DATASETS_DIR / "dermatology_erythemato.csv",
+        "target_col": "class",
+        "description": "Dermatology dataset. Predicts type of Eryhemato-Squamous Disease.",
+        "domain": "Dermatology",
+    },
+    "ophthalmology_retinopathy": {
+        "path": DATASETS_DIR / "ophthalmology_retinopathy.csv",
+        "target_col": "Class",
+        "description": "Diabetic Retinopathy Debrecen dataset. Predicts DR presence.",
+        "domain": "Ophthalmology",
+    },
+    "orthopaedics_vertebral": {
+        "path": DATASETS_DIR / "orthopaedics_vertebral.csv",
+        "target_col": "class",
+        "description": "Vertebral Column dataset. Predicts orthopedic pathologies.",
+        "domain": "Orthopaedics — Spine",
+    },
+    "icu_hepatitis": {
+        "path": DATASETS_DIR / "icu_hepatitis.csv",
+        "target_col": "Category",
+        "description": "HCV data. Classifies blood donors vs Hepatitis C patients.",
+        "domain": "ICU / Sepsis",
+    },
+    "cardiology_arrhythmia": {
+        "path": DATASETS_DIR / "cardiology_arrhythmia.csv",
+        "target_col": "arrhythmia",
+        "description": "Cardiac Arrhythmia. Predicts presence of arrhythmia from ECG.",
+        "domain": "Cardiology — Arrhythmia",
+    },
+    "endocrinology_thyroid": {
+        "path": DATASETS_DIR / "endocrinology_thyroid.csv",
+        "target_col": "class",
+        "description": "Thyroid Disease. Classifies thyroid function.",
+        "domain": "Thyroid / Endocrinology",
     },
 }
 
@@ -210,6 +282,7 @@ def list_available_datasets():
             "name": name,
             "target_col": config["target_col"],
             "description": config.get("description", ""),
+            "domain": config.get("domain", "Unknown"),
             "file_exists": file_path.exists(),
             "filename": file_path.name,
         })

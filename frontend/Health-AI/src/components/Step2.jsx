@@ -10,6 +10,7 @@ export default function Step2({
   setDatasetInfo,
   targetColumn,
   setTargetColumn,
+  selectedDomain,
 }) {
   const [isMapperOpen, setIsMapperOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -64,7 +65,10 @@ export default function Step2({
       const res = await fetch(`${API}/datasets`);
       const data = await res.json();
       if (data.status === "success") {
-        setAvailableDatasets(data.datasets.filter((d) => d.file_exists));
+        const filtered = data.datasets.filter(
+          (d) => d.file_exists && d.domain === selectedDomain
+        );
+        setAvailableDatasets(filtered);
       } else {
         setError("Could not retrieve dataset list.");
       }
@@ -226,7 +230,12 @@ export default function Step2({
                   <div style={{ textAlign: "center", padding: "20px", color: "var(--muted)" }}>
                     Loading datasets...
                   </div>
-                ) : availableDatasets.length > 0 ? (
+                ) : availableDatasets.length === 0 ? (
+                  <div style={{ textAlign: "center", padding: "20px", color: "var(--muted)", border: "1px dashed var(--line)", borderRadius: "8px" }}>
+                    No default datasets available for <b>{selectedDomain}</b>.<br/>
+                    Please upload your own CSV file.
+                  </div>
+                ) : (
                   <>
                     <label className="lbl">Select a Default Dataset</label>
                     <div

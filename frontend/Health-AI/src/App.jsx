@@ -130,6 +130,7 @@ function App() {
             setDatasetInfo={setDatasetInfo}
             targetColumn={targetColumn}
             setTargetColumn={setTargetColumn}
+            selectedDomain={selectedDomain}
           />
         )}
         {currentStep === 3 && (
