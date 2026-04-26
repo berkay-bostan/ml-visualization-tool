@@ -258,6 +258,8 @@ def get_dataset(dataset_name: str) -> dict:
     y = df[target_col]
 
     # 6. Metadata hazırla
+    # Ensure no NaNs in target classes for JSON serialization
+    unique_targets = [val for val in y.unique().tolist() if pd.notnull(val)]
     metadata = {
         "name": dataset_name,
         "target_col": target_col,
@@ -265,7 +267,7 @@ def get_dataset(dataset_name: str) -> dict:
         "num_samples": len(df),
         "num_features": len(X.columns),
         "feature_names": list(X.columns),
-        "target_classes": sorted(y.unique().tolist(), key=str),
+        "target_classes": sorted(unique_targets, key=str),
     }
 
     return {"X": X, "y": y, "metadata": metadata}
@@ -307,6 +309,9 @@ def load_local_dataset(dataset_name: str):
         column_types = {col: str(dtype) for col, dtype in X.dtypes.items()}
         missing_values = X.isnull().sum().to_dict()
 
+        # Handle NaN values for JSON serialization
+        preview_records = json.loads(X.head(5).to_json(orient="records"))
+
         return {
             "status": "success",
             "metadata": metadata,
@@ -320,7 +325,7 @@ def load_local_dataset(dataset_name: str):
                 "data_types": column_types,
             },
             "target_column": metadata["target_col"],
-            "preview": X.head(5).to_dict(orient="records"),
+            "preview": preview_records,
         }
 
     except ValueError as e:
