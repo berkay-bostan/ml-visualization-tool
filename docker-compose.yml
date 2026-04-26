@@ -9,7 +9,10 @@ services:
     restart: always
 
   frontend:
-    build: ./frontend/Health-AI
+    build:
+      context: ./frontend/Health-AI
+      args:
+        VITE_API_URL: http://localhost:8000
     container_name: react_app
     ports:
       - "3000:3000"

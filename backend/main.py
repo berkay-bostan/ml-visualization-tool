@@ -1,5 +1,6 @@
 import io
 import json
+from pathlib import Path
 
 import pandas as pd
 import numpy as np
@@ -40,6 +41,261 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+# =====================================================================
+# LOCAL DATASET MANAGEMENT SYSTEM
+# =====================================================================
+# Lokal CSV dosyalarını yöneten konfigürasyon ve yardımcı fonksiyonlar.
+# Tüm CSV dosyaları backend/datasets/ klasöründe tutulur.
+# ucimlrepo yerine pandas ile doğrudan okunur (offline & hızlı).
+# =====================================================================
+
+# Datasets klasörünün mutlak yolu
+DATASETS_DIR = Path(__file__).resolve().parent / "datasets"
+
+# Mevcut veri setlerinin konfigürasyon sözlüğü
+# Her bir anahtar (key) veri setinin benzersiz adıdır.
+# Değer (value) olarak path, target_col, description ve opsiyonel header_names tutulur.
+# header_names: CSV dosyasında başlık satırı yoksa sütun isimlerini belirtir.
+AVAILABLE_DATASETS: dict[str, dict] = {
+    # 1. Heart Failure — Cardiology
+    "heart_failure": {
+        "path": DATASETS_DIR / "heart_failure_clinical_records_dataset.csv",
+        "target_col": "DEATH_EVENT",
+        "description": "UCI Heart Failure Clinical Records — 299 hasta, 12 özellik. "
+                       "Kalp yetmezliği sonrası 30 günlük ölüm riskini tahmin eder.",
+    },
+    # 2. Breast Cancer Coimbra — Oncology
+    "breast_cancer_coimbra": {
+        "path": DATASETS_DIR / "breast+cancer+coimbra.csv",
+        "target_col": "Classification",
+        "description": "Breast Cancer Coimbra — 116 hasta, 9 biyobelirteç. "
+                       "Kan testi sonuçlarından meme kanseri riskini sınıflandırır (1=Sağlıklı, 2=Hasta).",
+    },
+    # 3. Diabetes Early Prediction — Endocrinology
+    "diabetes_early": {
+        "path": DATASETS_DIR / "diabetes_data_upload.csv",
+        "target_col": "class",
+        "description": "Early Stage Diabetes Risk Prediction — 520 hasta, 16 semptom. "
+                       "Erken evre diyabet riskini (Positive/Negative) tahmin eder.",
+    },
+    # 4. Diabetes Readmission — Pharmacy / Hospital
+    "diabetes_readmission": {
+        "path": DATASETS_DIR / "diabetic_data.csv",
+        "target_col": "readmitted",
+        "description": "UCI Diabetes 130-US Hospitals — 100K+ hasta, 49 özellik. "
+                       "Diyabet hastalarının hastaneye yeniden yatış riskini tahmin eder.",
+    },
+    # 5. Fetal Health — Obstetrics
+    "fetal_health": {
+        "path": DATASETS_DIR / "fetal_health.csv",
+        "target_col": "fetal_health",
+        "description": "UCI Fetal Health — 2126 kayıt, 21 kardiyotokografi özelliği. "
+                       "Fetal sağlık durumunu sınıflandırır (1=Normal, 2=Şüpheli, 3=Patolojik).",
+    },
+    # 6. Stroke Prediction — Cardiology / Neurology
+    "stroke_prediction": {
+        "path": DATASETS_DIR / "healthcare-dataset-stroke-data.csv",
+        "target_col": "stroke",
+        "description": "Kaggle Stroke Prediction — 5110 hasta, 11 özellik. "
+                       "Demografik ve klinik verilerden inme (stroke) riskini tahmin eder.",
+    },
+    # 7. Indian Liver Patient — Hepatology
+    "indian_liver_patient": {
+        "path": DATASETS_DIR / "IndianLiverPatientDataset.csv",
+        "target_col": "Selector",
+        "description": "Indian Liver Patient — 583 hasta, 10 kan testi sonucu. "
+                       "Karaciğer hastalığı teşhisini (1=Hasta, 2=Sağlıklı) tahmin eder.",
+        # Bu CSV dosyasında başlık satırı bulunmadığından UCI resmi sütun isimleri verilir
+        "header_names": [
+            "Age", "Gender", "TB", "DB", "Alkphos", "Sgpt", "Sgot",
+            "TP", "ALB", "A/G Ratio", "Selector",
+        ],
+    },
+    # 8. Cervical Cancer Risk — Oncology
+    "cervical_cancer": {
+        "path": DATASETS_DIR / "risk_factors_cervical_cancer.csv",
+        "target_col": "Biopsy",
+        "description": "UCI Cervical Cancer Risk Factors — 858 hasta, 35 özellik. "
+                       "Demografik ve davranışsal verilerle serviks kanseri riskini tahmin eder.",
+    },
+}
+
+
+def get_dataset(dataset_name: str) -> dict:
+    """
+    İstenen veri setini lazy-loading ile yükler.
+
+    Parametreler:
+        dataset_name: AVAILABLE_DATASETS sözlüğündeki anahtar isim.
+
+    Döndürür:
+        {
+            "X": pd.DataFrame,      # Özellik sütunları
+            "y": pd.Series,          # Hedef sütunu
+            "metadata": dict          # Veri seti metadatası
+        }
+
+    Hatalar:
+        ValueError  — Veri seti sözlükte bulunamazsa.
+        FileNotFoundError — CSV dosyası diskte yoksa.
+        RuntimeError — CSV okunurken beklenmeyen hata oluşursa.
+    """
+    # 1. Sözlükte var mı kontrol et
+    if dataset_name not in AVAILABLE_DATASETS:
+        available = ", ".join(sorted(AVAILABLE_DATASETS.keys()))
+        raise ValueError(
+            f"'{dataset_name}' adında bir veri seti bulunamadı. "
+            f"Mevcut veri setleri: {available}"
+        )
+
+    config = AVAILABLE_DATASETS[dataset_name]
+    file_path: Path = config["path"]
+    target_col: str = config["target_col"]
+
+    # 2. Dosya var mı kontrol et
+    if not file_path.exists():
+        raise FileNotFoundError(
+            f"Veri seti dosyası bulunamadı: {file_path}. "
+            f"Lütfen '{file_path.name}' dosyasını backend/datasets/ klasörüne ekleyin."
+        )
+
+    # 3. CSV'yi oku (Lazy Loading — sadece çağrıldığında okunur)
+    # header_names varsa CSV'de başlık satırı yoktur, sütun isimlerini biz veririz
+    try:
+        header_names = config.get("header_names")
+        if header_names:
+            df = pd.read_csv(file_path, header=None, names=header_names)
+        else:
+            df = pd.read_csv(file_path)
+    except Exception as exc:
+        raise RuntimeError(
+            f"'{dataset_name}' veri seti okunurken hata oluştu: {exc}"
+        ) from exc
+
+    # 4. Hedef sütun kontrolü
+    if target_col not in df.columns:
+        raise ValueError(
+            f"Hedef sütun '{target_col}' veri setinde bulunamadı. "
+            f"Mevcut sütunlar: {list(df.columns)}"
+        )
+
+    # 5. Özellikler (X) ve hedef (y) olarak ayır
+    X = df.drop(columns=[target_col])
+    y = df[target_col]
+
+    # 6. Metadata hazırla
+    metadata = {
+        "name": dataset_name,
+        "target_col": target_col,
+        "description": config.get("description", ""),
+        "num_samples": len(df),
+        "num_features": len(X.columns),
+        "feature_names": list(X.columns),
+        "target_classes": sorted(y.unique().tolist(), key=str),
+    }
+
+    return {"X": X, "y": y, "metadata": metadata}
+
+
+# --- API: Mevcut lokal veri setlerini listele ---
+@app.get("/datasets")
+def list_available_datasets():
+    """Kullanılabilir tüm lokal veri setlerini ve metadatalarını döndürür."""
+    datasets_info = []
+    for name, config in AVAILABLE_DATASETS.items():
+        file_path: Path = config["path"]
+        datasets_info.append({
+            "name": name,
+            "target_col": config["target_col"],
+            "description": config.get("description", ""),
+            "file_exists": file_path.exists(),
+            "filename": file_path.name,
+        })
+    return {"status": "success", "datasets": datasets_info}
+
+
+# --- API: Belirli bir lokal veri setini yükle ---
+@app.get("/datasets/{dataset_name}")
+def load_local_dataset(dataset_name: str):
+    """
+    Belirtilen veri setini diskten okur ve özet bilgileriyle birlikte döndürür.
+    Frontend bu endpoint'i kullanarak dosya yüklemeye gerek kalmadan
+    default veri setlerini doğrudan yükleyebilir.
+    """
+    try:
+        result = get_dataset(dataset_name)
+        X: pd.DataFrame = result["X"]
+        y: pd.Series = result["y"]
+        metadata: dict = result["metadata"]
+
+        # Sütun tipleri ve eksik değer bilgisi
+        column_types = {col: str(dtype) for col, dtype in X.dtypes.items()}
+        missing_values = X.isnull().sum().to_dict()
+
+        return {
+            "status": "success",
+            "metadata": metadata,
+            "dataset_summary": {
+                "total_patients": metadata["num_samples"],
+                "total_measurements": metadata["num_features"],
+            },
+            "columns": list(X.columns) + [metadata["target_col"]],
+            "columns_info": {
+                "missing_data_count": missing_values,
+                "data_types": column_types,
+            },
+            "target_column": metadata["target_col"],
+            "preview": X.head(5).to_dict(orient="records"),
+        }
+
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except FileNotFoundError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except RuntimeError as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# --- API: Lokal CSV dosyasını indir (frontend File objesi oluşturmak için) ---
+@app.get("/datasets/{dataset_name}/download")
+def download_local_dataset(dataset_name: str):
+    """
+    Belirtilen veri setinin ham CSV dosyasını döndürür.
+    Frontend bu endpoint ile CSV'yi indirip File objesine çevirir,
+    böylece sonraki adımlardaki (Step 3-7) file upload API'leri
+    değişmeden çalışmaya devam eder.
+    """
+    if dataset_name not in AVAILABLE_DATASETS:
+        raise HTTPException(status_code=404, detail=f"'{dataset_name}' bulunamadı.")
+
+    config = AVAILABLE_DATASETS[dataset_name]
+    file_path: Path = config["path"]
+
+    if not file_path.exists():
+        raise HTTPException(status_code=404, detail=f"Dosya bulunamadı: {file_path.name}")
+
+    # header_names varsa CSV'yi oku ve header ekleyerek geri dön
+    header_names = config.get("header_names")
+    if header_names:
+        df = pd.read_csv(file_path, header=None, names=header_names)
+        csv_buffer = io.StringIO()
+        df.to_csv(csv_buffer, index=False)
+        csv_bytes = csv_buffer.getvalue().encode("utf-8")
+        return StreamingResponse(
+            io.BytesIO(csv_bytes),
+            media_type="text/csv",
+            headers={"Content-Disposition": f"attachment; filename={dataset_name}.csv"},
+        )
+
+    # Header olan dosyaları doğrudan gönder
+    from fastapi.responses import FileResponse
+    return FileResponse(
+        path=str(file_path),
+        media_type="text/csv",
+        filename=f"{dataset_name}.csv",
+    )
 
 
 # --- STEP 1: DOMAINS (20 Clinical Specialties) ---

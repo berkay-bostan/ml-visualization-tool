@@ -3,12 +3,13 @@ import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/ml-visualization-tool/',
+  base: process.env.VITE_BASE_PATH || '/',
   plugins: [react()],
   server: {
     proxy: {
       // During local dev, proxy all backend paths to FastAPI on :8000
       '/domains': 'http://localhost:8000',
+      '/datasets': 'http://localhost:8000',
       '/dataset': 'http://localhost:8000',
       '/preprocess': 'http://localhost:8000',
       '/train': 'http://localhost:8000',
