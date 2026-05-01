@@ -46,12 +46,16 @@ function App() {
   const [allTrainedModels, setAllTrainedModels] = useState([]);
   const [prepResult, setPrepResult] = useState(null);
 
+  // Kullanıcının ulaştığı en yüksek adım
+  const [maxStepReached, setMaxStepReached] = useState(1);
+
   // Navigasyon Modalı
   const [isNavModalOpen, setIsNavModalOpen] = useState(false);
 
   // 🔄 RESET — Tüm uygulamayı sıfırla
   const handleReset = () => {
     setCurrentStep(1);
+    setMaxStepReached(1);
     setFile(null);
     setDatasetInfo(null);
     setTargetColumn("");
@@ -75,16 +79,36 @@ function App() {
 
   // 🛡️ GATEKEEPER
   const handleStepChange = (newStep) => {
+    // Geri gitmeye her zaman izin ver
     if (newStep < currentStep) {
       setCurrentStep(newStep);
       return;
     }
+
+    // İleri atlamayı engelle — sadece ulaşılmış adımlara gidilebilir
+    if (newStep > maxStepReached + 1) {
+      return;
+    }
+
+    // Step 3+: targetColumn gerekli
     if (newStep >= 3 && !targetColumn) {
       setIsNavModalOpen(true);
       setCurrentStep(2);
       return;
     }
+
+    // Step 4+: prepResult gerekli (Step 3 tamamlanmalı)
+    if (newStep >= 4 && !prepResult) {
+      return;
+    }
+
+    // Step 6+: model eğitilmiş olmalı
+    if (newStep >= 6 && allTrainedModels.length === 0) {
+      return;
+    }
+
     setCurrentStep(newStep);
+    setMaxStepReached((prev) => Math.max(prev, newStep));
   };
 
   const closeNavModal = () => setIsNavModalOpen(false);
@@ -112,7 +136,7 @@ function App() {
           ))}
         </div>
 
-        <Stepper currentStep={currentStep} setCurrentStep={handleStepChange} />
+        <Stepper currentStep={currentStep} setCurrentStep={handleStepChange} maxStepReached={maxStepReached} />
 
         {currentStep === 1 && (
           <Step1

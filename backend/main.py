@@ -140,7 +140,7 @@ AVAILABLE_DATASETS: dict[str, dict] = {
     },
     "mental_health_autism": {
         "path": DATASETS_DIR / "mental_health_autism.csv",
-        "target_col": "Class/ASD",
+        "target_col": "class",
         "description": "Autism Screening dataset. Predicts ASD presence from behavioral traits.",
         "domain": "Mental Health",
     },

@@ -2,7 +2,7 @@
 title: Health AI Backend
 emoji: 🏥
 colorFrom: blue
-colorTo: green
+colorTo: teal
 sdk: docker
 app_port: 8000
 pinned: false

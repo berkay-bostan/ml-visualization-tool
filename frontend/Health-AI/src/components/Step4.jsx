@@ -19,6 +19,7 @@ export default function Step4({
   const [latestResult, setLatestResult] = useState(null);
 
   const canvasRef = useRef(null);
+  const handleTrainRef = useRef(null);
   const [trainError, setTrainError] = useState(null);
 
   // FastAPI model training function
@@ -69,14 +70,19 @@ export default function Step4({
     }
   };
 
+  // Keep a ref to the latest handleTrain so the auto-retrain effect never uses a stale closure
+  useEffect(() => {
+    handleTrainRef.current = handleTrain;
+  });
+
   // AUTO-RETRAIN (Debounce): 300ms
   useEffect(() => {
     if (!autoRetrain || !file || !targetColumn) return;
     const timer = setTimeout(() => {
-      handleTrain(true);
+      handleTrainRef.current(true);
     }, 300);
     return () => clearTimeout(timer);
-  }, [knnK, rfTrees, knnDistance, activeModel, autoRetrain]);
+  }, [knnK, rfTrees, knnDistance, activeModel, autoRetrain, file, targetColumn]);
 
   // KNN Canvas Visualisation
   useEffect(() => {
