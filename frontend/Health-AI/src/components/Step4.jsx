@@ -294,6 +294,46 @@ export default function Step4({
               </div>
             )}
           </div>
+
+          {/* LIVE AUTO-RETRAIN PREVIEW */}
+          {autoRetrain && latestResult && (
+            <div className="card" style={{ marginTop: "15px", border: "1.5px solid rgba(13,122,80,0.3)", background: "#f0fdf4" }}>
+              <div className="card-title" style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                <span style={{
+                  display: "inline-block",
+                  width: "8px",
+                  height: "8px",
+                  borderRadius: "50%",
+                  background: "var(--teal)",
+                  animation: "pulse 1.5s ease-in-out infinite",
+                }}></span>
+                Live Preview — Auto-retrain
+              </div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+                {[
+                  { label: "Accuracy", value: `${latestResult.metrics?.accuracy ?? "—"}%`, color: "var(--navy)" },
+                  { label: "Sensitivity", value: `${latestResult.metrics?.sensitivity ?? "—"}%`, color: latestResult.metrics?.sensitivity < 70 ? "var(--bad)" : "var(--good)" },
+                  { label: "Specificity", value: `${latestResult.metrics?.specificity ?? "—"}%`, color: "var(--navy)" },
+                  { label: "AUC", value: latestResult.metrics?.auc ?? "—", color: "var(--navy)" },
+                ].map((m) => (
+                  <div key={m.label} style={{
+                    padding: "10px",
+                    background: "white",
+                    borderRadius: "10px",
+                    border: "1px solid var(--line)",
+                    textAlign: "center",
+                  }}>
+                    <div style={{ fontSize: "11px", color: "var(--muted)", fontWeight: 600, marginBottom: "4px" }}>{m.label}</div>
+                    <div style={{ fontSize: "18px", fontWeight: 700, color: m.color }}>{m.value}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ fontSize: "11px", color: "var(--muted)", marginTop: "8px", textAlign: "center" }}>
+                Adjust parameters above — results update automatically.
+                Click <b>Train Model</b> to save to the table.
+              </div>
+            </div>
+          )}
         </div>
 
         {/* RIGHT COLUMN */}
